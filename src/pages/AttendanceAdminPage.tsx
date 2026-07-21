@@ -105,7 +105,7 @@ export default function AttendanceAdminPage() {
     try {
       const response = await apiRequest<CompanyManagementResponse>('/companies/management', { token })
       setPositions(response.positions)
-      setWorkers(response.users.filter((u) => u.role === 'operativo'))
+      setWorkers(response.users.filter((u) => u.role === 'operativo' || u.role === 'supervisor'))
       setLocations(response.locations)
       setInvitations(response.invitations)
       setTurns(response.turns)
@@ -241,6 +241,7 @@ export default function AttendanceAdminPage() {
     }>()
     for (const row of attendanceRows) {
       if (row.estado === 'rechazado') continue
+      if (!row.entrada) continue  // sin checkIn → no facturar este turno
       const cur = map.get(row.workerId) ?? {
         workerId: row.workerId, nombre: row.nombre, cargo: row.cargo,
         documento: workers.find((w) => w.id === row.workerId)?.numeroDocumento ?? '',
@@ -272,12 +273,16 @@ export default function AttendanceAdminPage() {
     URL.revokeObjectURL(url)
   }
 
-  const metrics = useMemo(() => [
-    { title: 'Entradas', value: turns.filter((t) => t.estado === 'en_proceso' || t.estado === 'finalizado').length, accent: 'green', icon: 'icon-check-circle' as const },
-    { title: 'Salidas', value: turns.filter((t) => t.estado === 'finalizado').length, accent: 'blue', icon: 'icon-activity' as const },
-    { title: 'Tardanzas', value: turns.filter((t) => t.estado === 'pendiente').length, accent: 'amber', icon: 'icon-alert-triangle' as const },
-    { title: 'Ausentes', value: Math.max(workers.length - turns.length, 0), accent: 'red', icon: 'icon-x-circle' as const },
-  ], [turns, workers.length])
+  const metrics = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const todayTurns = turns.filter((t) => t.fecha === today)
+    return [
+      { title: 'Entradas hoy',  value: todayTurns.filter((t) => t.attendance?.checkIn).length,  accent: 'green', icon: 'icon-check-circle' as const },
+      { title: 'Salidas hoy',   value: todayTurns.filter((t) => t.attendance?.checkOut).length,  accent: 'blue',  icon: 'icon-activity' as const },
+      { title: 'Sin confirmar', value: todayTurns.filter((t) => t.estado === 'en_proceso').length, accent: 'amber', icon: 'icon-alert-triangle' as const },
+      { title: 'Sin asistencia', value: todayTurns.filter((t) => !t.attendance?.checkIn && t.estado !== 'rechazado').length, accent: 'red', icon: 'icon-x-circle' as const },
+    ]
+  }, [turns])
 
   const highlights = useMemo(() => [
     { label: 'Cargos', value: positions.length },

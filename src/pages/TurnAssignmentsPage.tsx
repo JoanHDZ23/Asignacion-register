@@ -112,7 +112,7 @@ function calcTurnHours(turn: TurnAssignment): number {
   const horaInStr  = parts[0]?.trim()
   const horaFinStr = parts[1]?.trim()
 
-  if (horaFinStr && horaFinStr && turn.fecha) {
+  if (horaInStr && horaFinStr && turn.fecha) {
     const [sh, sm] = (horaInStr ?? '').split(':').map(Number)
     const [eh, em] = horaFinStr.split(':').map(Number)
 
@@ -136,7 +136,8 @@ function calcTurnHours(turn: TurnAssignment): number {
 function needsSupervisorConfirm(turn: TurnAssignment): boolean {
   return Boolean(
     turn.attendance?.checkIn?.markedAt &&
-    turn.estado === 'en_proceso'   // marcó entrada pero supervisor no confirmó
+    !turn.attendance?.checkOut?.markedAt &&
+    turn.estado === 'en_proceso'
   )
 }
 
@@ -392,17 +393,8 @@ export default function TurnAssignmentsPage() {
     for (const t of filtered) {
       const key = t.assignedToUserId ?? t.asignadoA
       const cur = map.get(key) ?? { nombre: t.asignadoA, hours: 0, days: new Set(), turns: 0 }
-      // Calcula horas reales — si hay checkIn+checkOut siempre cuenta (independiente del estado)
-      const checkInMs  = t.attendance?.checkIn?.markedAt  ? new Date(t.attendance.checkIn.markedAt).getTime()  : null
-      const checkOutMs = t.attendance?.checkOut?.markedAt ? new Date(t.attendance.checkOut.markedAt).getTime() : null
-      let h = 0
-      if (checkInMs && checkOutMs) {
-        const diff = checkOutMs - checkInMs
-        h = diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
-      } else {
-        h = calcTurnHours(t)
-      }
-      cur.hours += h
+      // Usa directamente calcTurnHours — maneja checkIn/checkOut reales y turnos nocturnos
+      cur.hours += calcTurnHours(t)
       cur.days.add(t.fecha)
       cur.turns += 1
       map.set(key, cur)
@@ -411,6 +403,12 @@ export default function TurnAssignmentsPage() {
       .map((v) => ({ ...v, days: v.days.size }))
       .sort((a, b) => b.hours - a.hours)
   }, [canManageTurns, turns, selectedMonth])
+
+  // Total de horas de TODOS los empleados (para la cabecera de la tabla de empleados)
+  const employeeTotal = useMemo(
+    () => employeeMonthlyHours.reduce((s, e) => s + e.hours, 0),
+    [employeeMonthlyHours]
+  )
 
   const handleStatusChange = async (turnId: string, newStatus: 'confirmado' | 'rechazado') => {
     const token = getCurrentToken()
@@ -978,7 +976,8 @@ export default function TurnAssignmentsPage() {
           const allAssigned = turns.filter((t) => {
             if (t.fecha !== turnFecha) return false
             if (turnLocationId) return t.locationId === turnLocationId && t.titulo === turnTitulo
-            return t.titulo === turnTitulo
+            // Sin locationId: solo coincide si tampoco tiene locationId (evitar mezclar operaciones)
+            return !t.locationId && t.titulo === turnTitulo
           })
 
           // Separar para el resumen
@@ -1214,7 +1213,7 @@ export default function TurnAssignmentsPage() {
           <div className="hours-employee-table">
             <div className="hours-employee-table__title">
               Detalle por empleado · {fmtMes(selectedMonth)}
-              <span className="hours-total-badge">{fmtHours(totalThisMonth)} total</span>
+              <span className="hours-total-badge">{fmtHours(employeeTotal)} total</span>
             </div>
             <div className="table-wrap">
               <table className="data-table">

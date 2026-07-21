@@ -54,7 +54,7 @@ export type CompanyManagementResponse = {
   currentUser: {
     id: string
     companyId: string
-    role: 'admin' | 'operativo'
+    role: 'admin' | 'supervisor' | 'operativo'
     positionId?: string
     allowedModules: AccessModule[]
   } | null
@@ -103,7 +103,7 @@ export type UserResponse = {
   correo: string
   telefono?: string
   cargo: string
-  role: 'admin' | 'operativo'
+  role: 'admin' | 'supervisor' | 'operativo'
   positionId?: string
   activa: boolean
   createdAt: string

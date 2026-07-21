@@ -55,9 +55,11 @@ export default function DashboardHomePage() {
 
   const dashboardMetrics = useMemo(() => {
     const activeEmployees = management?.users.filter((user) => user.activa).length ?? 0
-    const onTimeEntries = turns.filter((turn) => turn.estado === 'finalizado').length
-    const pendingVerification = turns.filter((turn) => turn.estado === 'pendiente').length
-    const assignedToday = turns.filter((turn) => turn.estado === 'asignado').length
+    const today = new Date().toISOString().slice(0, 10)
+    const todayTurns = turns.filter((t) => t.fecha === today)
+    const onTimeEntries = todayTurns.filter((turn) => turn.estado === 'finalizado' || turn.attendance?.checkIn).length
+    const pendingVerification = todayTurns.filter((turn) => turn.estado === 'pendiente' || turn.estado === 'asignado').length
+    const assignedToday = todayTurns.length
 
     return [
       {
@@ -73,7 +75,7 @@ export default function DashboardHomePage() {
         accent: 'green',
       },
       {
-        title: 'Turnos por iniciar',
+        title: 'Turnos por iniciar hoy',
         value: pendingVerification,
         description: pendingVerification ? 'Revisar asignaciones pendientes' : 'Sin alertas inmediatas',
         accent: 'amber',
@@ -81,7 +83,7 @@ export default function DashboardHomePage() {
       {
         title: 'Turnos asignados hoy',
         value: assignedToday,
-        description: `${turns.length} en total`,
+        description: `${turns.length} en total historial`,
         accent: 'blue',
       },
     ]
