@@ -489,23 +489,6 @@ export default function AttendanceAdminPage() {
     finalizado: 'Finalizado', confirmado: 'Confirmado', rechazado: 'Rechazado',
   }
 
-  const [statusLoadingId, setStatusLoadingId] = useState<string | null>(null)
-
-  const handleStatusChange = async (turnId: string, newStatus: 'confirmado' | 'rechazado') => {
-    if (!token) return
-    setStatusLoadingId(turnId)
-    try {
-      await apiRequest<TurnResponse>(`/turns/${turnId}/status`, {
-        method: 'PATCH', token, body: { estado: newStatus },
-      })
-      await loadAdminData()
-    } catch (err) {
-      setTurnFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'No fue posible actualizar el estado.' })
-    } finally {
-      setStatusLoadingId(null)
-    }
-  }
-
   const resetTurnModal = () => {
     setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '' })
     setSelectedWorkerIds([])

@@ -185,31 +185,6 @@ async function getCurrentCoordinates() {
   })
 }
 
-/** Captura un frame de la cámara frontal como JPEG base64 (sin prefijo data:). */
-async function capturePhotoFromCamera(): Promise<{ base64: string; mimeType: string } | null> {
-  if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) return null
-  let stream: MediaStream | null = null
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
-    const video = document.createElement('video')
-    video.srcObject = stream
-    video.setAttribute('playsinline', 'true')
-    await video.play()
-    await new Promise<void>((resolve) => setTimeout(resolve, 400))
-    const canvas = document.createElement('canvas')
-    canvas.width  = video.videoWidth  || 640
-    canvas.height = video.videoHeight || 480
-    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height)
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-    const base64 = dataUrl.split(',')[1] ?? ''
-    return base64 ? { base64, mimeType: 'image/jpeg' } : null
-  } catch {
-    return null
-  } finally {
-    stream?.getTracks().forEach((t) => t.stop())
-  }
-}
-
 export default function TurnAssignmentsPage() {
   const currentUser = getCurrentUser()
   const isAdmin = currentUser?.role === 'admin'
@@ -987,8 +962,6 @@ export default function TurnAssignmentsPage() {
           // Separar para el resumen
           const checkedIn    = allAssigned.filter((t) => Boolean(t.attendance?.checkIn))
           const notCheckedIn = allAssigned.filter((t) => !t.attendance?.checkIn)
-          // Compañeros = todos excepto el supervisor (para el botón "Aprobar")
-          const colleagues   = allAssigned.filter((t) => t.assignedToUserId !== currentUserId)
 
           return (
             <div className="turn-detail-modal">
@@ -1160,7 +1133,7 @@ export default function TurnAssignmentsPage() {
               </div>
               <div className="facial-modal__actions">
                 <Button type="button" variant="ghost" onClick={cancelFacialCapture}>Cancelar</Button>
-                <Button type="button" icon="icon-camera" onClick={captureFacialFrame} disabled={facialModal.capturing}>
+                <Button type="button" icon="icon-check-circle" onClick={captureFacialFrame} disabled={facialModal.capturing}>
                   Tomar foto
                 </Button>
               </div>
