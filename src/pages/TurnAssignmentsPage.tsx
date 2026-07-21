@@ -693,11 +693,14 @@ export default function TurnAssignmentsPage() {
       await loadBiometricStatus()
     } catch (err) {
       const isCancelled = err instanceof Error && (err.name === 'NotAllowedError' || err.message.toLowerCase().includes('not allowed'))
+      const isConfirmRequired = err instanceof Error && err.message.includes('supervisor debe confirmar')
       setBiometricFeedback({
         kind: 'error',
         message: isCancelled
           ? 'Verificacion cancelada. Intenta de nuevo cuando estes listo.'
-          : (err instanceof Error ? err.message : 'No fue posible verificar la asistencia.'),
+          : isConfirmRequired
+            ? 'El supervisor aún no ha confirmado tu ingreso. Debes esperar la confirmación para poder registrar la salida.'
+            : (err instanceof Error ? err.message : 'No fue posible verificar la asistencia.'),
       })
     } finally {
       setAttendanceLoadingId(null)
@@ -830,20 +833,27 @@ export default function TurnAssignmentsPage() {
 
                       {/* Marcar asistencia propia */}
                       {(turn.estado === 'confirmado' || turn.estado === 'en_proceso') && pendingAction ? (
-                        <Button
-                          type="button" size="sm"
-                          onClick={() => {
-                            if (pendingAction === 'salida') {
-                              // Salida: sin modal de cámara, directo
-                              void handleAttendanceVerification(turn, 'salida', null)
-                            } else {
-                              openFacialCapture(turn, pendingAction)
-                            }
-                          }}
-                          disabled={attendanceLoadingId === turn.id}
-                        >
-                          {attendanceLoadingId === turn.id ? 'Registrando...' : pendingAction === 'entrada' ? 'Marcar entrada' : 'Marcar salida'}
-                        </Button>
+                        pendingAction === 'salida' && turn.estado === 'en_proceso' ? (
+                          /* Salida bloqueada — esperando confirmación del supervisor */
+                          <div className="confirm-required-msg">
+                            <Icon name="icon-shield" size={13} />
+                            <span>Esperando confirmación del supervisor para marcar salida</span>
+                          </div>
+                        ) : (
+                          <Button
+                            type="button" size="sm"
+                            onClick={() => {
+                              if (pendingAction === 'salida') {
+                                void handleAttendanceVerification(turn, 'salida', null)
+                              } else {
+                                openFacialCapture(turn, pendingAction)
+                              }
+                            }}
+                            disabled={attendanceLoadingId === turn.id}
+                          >
+                            {attendanceLoadingId === turn.id ? 'Registrando...' : pendingAction === 'entrada' ? 'Marcar entrada' : 'Marcar salida'}
+                          </Button>
+                        )
                       ) : turn.estado === 'finalizado' || (turn.attendance?.checkIn && turn.attendance.checkOut) ? (
                         <span className="biometric-turn-item__done">Asistencia completa</span>
                       ) : null}
