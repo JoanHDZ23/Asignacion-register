@@ -419,8 +419,8 @@ export default function AttendanceAdminPage() {
 
   const handleCreateTurnsForMultiple = async () => {
     if (!token) return
-    if (!turnForm.titulo || !turnForm.fecha || !turnForm.hora || !turnForm.locationId) {
-      setTurnFeedback({ kind: 'error', message: 'Completa titulo, fecha, hora y ubicacion.' })
+    if (!turnForm.fecha || !turnForm.hora || !turnForm.locationId) {
+      setTurnFeedback({ kind: 'error', message: 'Completa fecha, hora y ubicacion.' })
       return
     }
     if (!selectedWorkerIds.length) {
@@ -1053,11 +1053,6 @@ export default function AttendanceAdminPage() {
         <div className="turn-form">
           <div className="turn-form__fields">
             <label className="turn-form__field">
-              <span>Titulo <span className="req">*</span></span>
-              <input type="text" placeholder="Ej. Turno mañana" value={turnForm.titulo}
-                onChange={(e) => setTurnForm((f) => ({ ...f, titulo: e.target.value }))} />
-            </label>
-            <label className="turn-form__field">
               <span>Fecha <span className="req">*</span></span>
               <input type="date" value={turnForm.fecha}
                 onChange={(e) => { const v = e.target.value; setTurnForm((f) => ({ ...f, fecha: v })); checkConflicts(v, selectedWorkerIds) }} />
@@ -1075,7 +1070,11 @@ export default function AttendanceAdminPage() {
             <label className="turn-form__field turn-form__field--full">
               <span>Ubicacion <span className="req">*</span></span>
               <select value={turnForm.locationId}
-                onChange={(e) => setTurnForm((f) => ({ ...f, locationId: e.target.value }))}>
+                onChange={(e) => {
+                  const locId = e.target.value
+                  const loc = locations.find((l) => l.id === locId)
+                  setTurnForm((f) => ({ ...f, locationId: locId, titulo: loc?.nombre ?? '' }))
+                }}>
                 <option value="">Selecciona una ubicacion</option>
                 {locations.map((l) => (
                   <option key={l.id} value={l.id}>{l.nombre}{l.direccion ? ` · ${l.direccion}` : ''}</option>
@@ -1131,7 +1130,7 @@ export default function AttendanceAdminPage() {
           <div className="confirm-actions">
             <Button type="button" variant="ghost" onClick={resetTurnModal}>Cancelar</Button>
             <Button type="button" variant="primary" onClick={() => void handleCreateTurnsForMultiple()}
-              disabled={!selectedWorkerIds.length || turnConflicts.length > 0 || !turnForm.titulo || !turnForm.fecha || !turnForm.hora || !turnForm.locationId}>
+              disabled={!selectedWorkerIds.length || turnConflicts.length > 0 || !turnForm.fecha || !turnForm.hora || !turnForm.locationId}>
               <Icon name="icon-calendar" size={15} /> Crear {selectedWorkerIds.length > 1 ? `${selectedWorkerIds.length} turnos` : 'turno'}
             </Button>
           </div>

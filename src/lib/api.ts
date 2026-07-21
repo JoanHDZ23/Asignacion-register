@@ -153,12 +153,12 @@ export type TurnResponse = {
   assignedToUserName?: string
   locationId?: string
   locationNombre?: string
-  confirmedDeadline?: string   // ISO — límite para confirmar (hora turno - 4h)
+  confirmedDeadline?: string
   attendance?: {
     checkIn?: {
       action: 'entrada'
       markedAt: string
-      method: 'webauthn'
+      method: 'webauthn' | 'pin'
       credentialId: string
       facialPhotoUrl?: string
       locationCheck: {
@@ -175,7 +175,7 @@ export type TurnResponse = {
     checkOut?: {
       action: 'salida'
       markedAt: string
-      method: 'webauthn'
+      method: 'webauthn' | 'pin'
       credentialId: string
       facialPhotoUrl?: string
       locationCheck: {

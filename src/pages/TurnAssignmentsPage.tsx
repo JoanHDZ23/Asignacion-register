@@ -95,6 +95,7 @@ function calcTurnHours(turn: TurnAssignment): number {
   const checkOutMs = att?.checkOut?.markedAt ? new Date(att.checkOut.markedAt).getTime() : null
 
   // ── Caso 1: tenemos checkIn Y checkOut reales → siempre usa la diferencia real
+  // (independiente del estado — el tiempo real siempre cuenta)
   if (checkInMs && checkOutMs) {
     const diff = checkOutMs - checkInMs
     return diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
@@ -391,7 +392,17 @@ export default function TurnAssignmentsPage() {
     for (const t of filtered) {
       const key = t.assignedToUserId ?? t.asignadoA
       const cur = map.get(key) ?? { nombre: t.asignadoA, hours: 0, days: new Set(), turns: 0 }
-      cur.hours += calcTurnHours(t)
+      // Calcula horas reales — si hay checkIn+checkOut siempre cuenta (independiente del estado)
+      const checkInMs  = t.attendance?.checkIn?.markedAt  ? new Date(t.attendance.checkIn.markedAt).getTime()  : null
+      const checkOutMs = t.attendance?.checkOut?.markedAt ? new Date(t.attendance.checkOut.markedAt).getTime() : null
+      let h = 0
+      if (checkInMs && checkOutMs) {
+        const diff = checkOutMs - checkInMs
+        h = diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
+      } else {
+        h = calcTurnHours(t)
+      }
+      cur.hours += h
       cur.days.add(t.fecha)
       cur.turns += 1
       map.set(key, cur)
@@ -1433,23 +1444,18 @@ export default function TurnAssignmentsPage() {
             </div>
           </label>
           <label className="filter-toolbar__field">
-            <span>Turno</span>
-            <select value={createForm.titulo}
-              onChange={(e) => setCreateForm((c) => ({ ...c, titulo: e.target.value }))}>
-              <option value="Manana">Manana</option>
-              <option value="Tarde">Tarde</option>
-              <option value="Noche">Noche</option>
-            </select>
-          </label>
-          <label className="filter-toolbar__field">
             <span>Fecha</span>
             <input type="date" value={createForm.fecha}
               onChange={(e) => setCreateForm((c) => ({ ...c, fecha: e.target.value }))} />
           </label>
           <label className="filter-toolbar__field">
-            <span>Ubicacion</span>
+            <span>Ubicacion <span style={{color:'var(--clr-red)'}}>*</span></span>
             <select value={createForm.locationId}
-              onChange={(e) => setCreateForm((c) => ({ ...c, locationId: e.target.value }))}>
+              onChange={(e) => {
+                const locId = e.target.value
+                const loc = locations.find((l) => l.id === locId)
+                setCreateForm((c) => ({ ...c, locationId: locId, titulo: loc?.nombre ?? '' }))
+              }}>
               <option value="">Selecciona una ubicacion</option>
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>{l.nombre}</option>
