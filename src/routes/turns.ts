@@ -73,7 +73,7 @@ turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
     (user) =>
       user.id === assignedToUserId &&
       user.companyId === companyId &&
-      user.role === 'operativo',
+      (user.role === 'operativo' || user.role === 'supervisor'),
   )
   const location = db.locations.find(
     (item) =>
@@ -82,7 +82,7 @@ turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
   )
 
   if (!assignedUser) {
-    response.status(404).json({ message: 'El trabajador operativo no existe.' })
+    response.status(404).json({ message: 'El trabajador no existe o no pertenece a esta empresa.' })
     return
   }
 

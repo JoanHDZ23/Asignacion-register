@@ -494,14 +494,43 @@ function locationToRemoteRow(location: Location) {
 function mapTurnRow(row: Record<string, unknown>): Turn {
   const attendance = row.attendance as Turn['attendance'] | undefined
 
+  // Convierte un valor de celda de Sheets a string de fecha YYYY-MM-DD
+  function toDateString(val: unknown): string {
+    if (!val) return ''
+    if (val instanceof Date) {
+      const y = val.getFullYear()
+      const m = String(val.getMonth() + 1).padStart(2, '0')
+      const d = String(val.getDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
+    }
+    const s = String(val).trim()
+    // Ya viene como YYYY-MM-DD o similar
+    const match = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+    if (match) return `${match[1]}-${match[2].padStart(2,'0')}-${match[3].padStart(2,'0')}`
+    return s
+  }
+
+  // Convierte un valor de celda de Sheets a string de hora HH:MM
+  function toTimeString(val: unknown): string {
+    if (!val) return ''
+    if (val instanceof Date) {
+      return `${String(val.getHours()).padStart(2,'0')}:${String(val.getMinutes()).padStart(2,'0')}`
+    }
+    const s = String(val).trim()
+    // Ya viene como HH:MM
+    const match = s.match(/(\d{1,2}):(\d{2})/)
+    if (match) return `${match[1].padStart(2,'0')}:${match[2]}`
+    return s
+  }
+
   return {
     id: getString(row.id_asignacion ?? row.id),
     companyId: '',
     titulo: getString(row.titulo ?? ''),
     descripcion: getOptionalString(row.descripcion ?? row.Descripcion),
-    fecha: getString(row.fecha ?? row.Fecha),
-    hora: getString(row.hora_entrada_esperada ?? row.hora ?? ''),
-    horaFin: getOptionalString(row.hora_salida_esperada ?? row.horaFin),
+    fecha: toDateString(row.fecha ?? row.Fecha),
+    hora: toTimeString(row.hora_entrada_esperada ?? row.hora),
+    horaFin: toTimeString(row.hora_salida_esperada ?? row.horaFin) || undefined,
     estado: getString(row.estado_turno ?? row.estado ?? 'pendiente') as Turn['estado'],
     creadoPorUserId: getString(row.creado_por ?? ''),
     assignedToUserId: getOptionalString(row.id_usuario ?? row.assignedToUserId),
