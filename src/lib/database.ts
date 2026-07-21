@@ -17,7 +17,7 @@ const dataDirectory = path.resolve(process.cwd(), 'data')
 const databasePath = path.join(dataDirectory, 'db.json')
 const remoteDatabaseUrl =
   process.env.APPS_SCRIPT_DB_URL ??
-  'https://script.google.com/macros/s/AKfycbzdtvclO_M-Qmq1vT7z6zXlDSWhocGhuSB5CHd8TXg8G0_TMCt9PwHoj_vzuLtmH8FP/exec'
+  'https://script.google.com/macros/s/AKfycbzQJMq7DlAXbJ7uqaivBIXz2gn-hytkAxnQxM5zTVI9wMRWsw4GepK2X-2cPOWZIG2C/exec'
 
 const defaultDatabase: DatabaseSchema = {
   companies: [],
