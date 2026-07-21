@@ -1,0 +1,35 @@
+export const iconNames = [
+  // App icons
+  'icon-home',
+  'icon-calendar',
+  'icon-clipboard',
+  'icon-search',
+  'icon-logout',
+  'icon-plus',
+  'icon-user',
+  'icon-users',
+  'icon-map-pin',
+  'icon-clock',
+  'icon-check-circle',
+  'icon-alert-triangle',
+  'icon-x-circle',
+  'icon-bar-chart',
+  'icon-activity',
+  'icon-link',
+  'icon-copy',
+  'icon-edit',
+  'icon-shield',
+  'icon-fingerprint',
+  'icon-arrow-right',
+  'icon-building',
+  'icon-briefcase',
+  'icon-menu',
+  'icon-x',
+  'icon-check',
+  'icon-refresh',
+  // Legacy
+  'documentation-icon',
+  'social-icon',
+] as const
+
+export type IconName = (typeof iconNames)[number]
