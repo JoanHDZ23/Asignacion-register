@@ -21,6 +21,10 @@ export default function DashboardHomePage() {
     ? currentUser.allowedModules
     : getDefaultAllowedModules(currentUser?.role ?? 'operativo')
 
+  // Permisos derivados
+  const hasGestion       = isAdmin || allowedModules.includes('gestion-asistencia')
+  const hasAsignacion    = allowedModules.includes('asignacion-turnos')
+
   useEffect(() => {
     const token = getCurrentToken()
 
@@ -61,38 +65,39 @@ export default function DashboardHomePage() {
     const pendingVerification = todayTurns.filter((turn) => turn.estado === 'pendiente' || turn.estado === 'asignado').length
     const assignedToday = todayTurns.length
 
-    return [
-      {
+    const all = [
+      hasGestion ? {
         title: 'Empleados activos',
         value: activeEmployees,
         description: `Empresa: ${company?.nombre ?? 'Sin empresa activa'}`,
         accent: 'violet',
-      },
-      {
+      } : null,
+      hasGestion ? {
         title: 'Entradas verificadas hoy',
         value: onTimeEntries,
         description: onTimeEntries ? 'Registro operativo al dia' : 'Pendiente de validacion',
         accent: 'green',
-      },
-      {
+      } : null,
+      hasAsignacion ? {
         title: 'Turnos por iniciar hoy',
         value: pendingVerification,
         description: pendingVerification ? 'Revisar asignaciones pendientes' : 'Sin alertas inmediatas',
         accent: 'amber',
-      },
-      {
+      } : null,
+      hasAsignacion ? {
         title: 'Turnos asignados hoy',
         value: assignedToday,
         description: `${turns.length} en total historial`,
         accent: 'blue',
-      },
+      } : null,
     ]
-  }, [company?.nombre, management?.users, turns])
+    return all.filter(Boolean) as { title: string; value: number; description: string; accent: string }[]
+  }, [company?.nombre, management?.users, turns, hasGestion, hasAsignacion])
 
   const quickAccessItems = useMemo(
     () =>
       [
-        allowedModules.includes('asignacion-turnos')
+        hasAsignacion
           ? {
               to: '/dashboard/asignacion-turnos',
               title: 'Asignacion de turnos',
@@ -100,7 +105,7 @@ export default function DashboardHomePage() {
               accent: 'violet',
             }
           : null,
-        isAdmin || allowedModules.includes('gestion-asistencia')
+        hasGestion
           ? {
               to: '/dashboard/gestion-asistencia',
               title: 'Gestion de asistencia',
@@ -109,16 +114,10 @@ export default function DashboardHomePage() {
             }
           : null,
       ].filter(
-        (
-          item,
-        ): item is {
-          to: string
-          title: string
-          description: string
-          accent: 'violet' | 'green'
-        } => Boolean(item),
+        (item): item is { to: string; title: string; description: string; accent: 'violet' | 'green' } =>
+          Boolean(item),
       ),
-    [allowedModules, isAdmin],
+    [hasAsignacion, hasGestion],
   )
 
   const upcomingTurns = useMemo(() => {
@@ -220,20 +219,11 @@ export default function DashboardHomePage() {
 
   const dashboardSignals = useMemo(
     () => [
-      {
-        label: 'Puntos activos',
-        value: assignmentsByPoint.length,
-      },
-      {
-        label: 'Turnos hoy',
-        value: turns.length,
-      },
-      {
-        label: 'Equipo operativo',
-        value: management?.users.filter((user) => user.role === 'operativo').length ?? 0,
-      },
-    ],
-    [assignmentsByPoint.length, management?.users, turns.length],
+      hasAsignacion ? { label: 'Puntos activos',  value: assignmentsByPoint.length } : null,
+      hasAsignacion ? { label: 'Turnos hoy',      value: turns.length } : null,
+      hasGestion    ? { label: 'Equipo operativo', value: management?.users.filter((u) => u.role === 'operativo').length ?? 0 } : null,
+    ].filter(Boolean) as { label: string; value: number }[],
+    [assignmentsByPoint.length, management?.users, turns.length, hasAsignacion, hasGestion],
   )
 
   useEffect(() => {
@@ -259,80 +249,91 @@ export default function DashboardHomePage() {
         ) : null}
       </section>
 
-      <section className="stats-grid">
-        {dashboardMetrics.map((metric) => (
-          <article className="stat-card" key={metric.title}>
-            <div className={`stat-icon stat-icon--${metric.accent}`}>
-              <Icon name="icon-bar-chart" size={18} />
-            </div>
-            <div className="stat-content">
-              <div className="stat-value">{metric.value}</div>
-              <div className="stat-label">{metric.title}</div>
-              <div className="stat-meta">{metric.description}</div>
-            </div>
-          </article>
-        ))}
-      </section>
-
-      <section className="content-grid">
-        <article className="content-card">
-          <h3>Accesos rapidos</h3>
-
-          <div className="quick-link-list">
-            {quickAccessItems.map((item) => (
-              <Link className="quick-link" key={item.to} to={item.to}>
-                <div className={`quick-link-icon quick-link-icon--${item.accent}`}>
-                  <Icon name="icon-bar-chart" size={18} />
-                </div>
-                <div className="quick-link-content">
-                  <div className="quick-link-title">{item.title}</div>
-                  <div className="quick-link-desc">{item.description}</div>
-                </div>
-                <span className="quick-link-arrow">→</span>
-              </Link>
-            ))}
-          </div>
-        </article>
-
-        <article className="content-card">
-          <h3>5 turnos por iniciar</h3>
-          <p className="text-secondary">Vista rapida de los proximos turnos operativos programados.</p>
-
-          <div className="turn-preview-list">
-            {upcomingTurns.length ? (
-              upcomingTurns.map((turn) => (
-                <article className="turn-preview-item" key={turn.id}>
-                  <div className={`turn-preview-icon turn-preview-icon--${turn.accent}`}>
-                    <Icon name="icon-bar-chart" size={16} />
-                  </div>
-                  <div className="turn-preview-body">
-                    <div className="turn-preview-title">{turn.responsable}</div>
-                    <div className="turn-preview-meta">{`${turn.titulo} · ${turn.ubicacion}`}</div>
-                    <div className="turn-preview-meta">{`${turn.horario} · Estado: ${turn.estado}`}</div>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="empty-state">
-                <div className="empty-state-title">Sin turnos proximos</div>
-                <div className="empty-state-desc">
-                  No hay turnos pendientes o asignados para mostrar en este momento.
-                </div>
+      {/* Stats — solo las métricas permitidas según módulos */}
+      {dashboardMetrics.length > 0 ? (
+        <section className="stats-grid">
+          {dashboardMetrics.map((metric) => (
+            <article className="stat-card" key={metric.title}>
+              <div className={`stat-icon stat-icon--${metric.accent}`}>
+                <Icon name="icon-bar-chart" size={18} />
               </div>
-            )}
-          </div>
-        </article>
-      </section>
+              <div className="stat-content">
+                <div className="stat-value">{metric.value}</div>
+                <div className="stat-label">{metric.title}</div>
+                <div className="stat-meta">{metric.description}</div>
+              </div>
+            </article>
+          ))}
+        </section>
+      ) : null}
 
-      <section className="dashboard-signal-strip">
-        {dashboardSignals.map((signal) => (
-          <article className="signal-chip" key={signal.label}>
-            <strong>{signal.value}</strong>
-            <span>{signal.label}</span>
-          </article>
-        ))}
-      </section>
+      {/* Accesos rápidos + turnos próximos — solo si tiene algún módulo */}
+      {quickAccessItems.length > 0 || hasAsignacion ? (
+        <section className="content-grid">
+          {quickAccessItems.length > 0 ? (
+            <article className="content-card">
+              <h3>Accesos rapidos</h3>
+              <div className="quick-link-list">
+                {quickAccessItems.map((item) => (
+                  <Link className="quick-link" key={item.to} to={item.to}>
+                    <div className={`quick-link-icon quick-link-icon--${item.accent}`}>
+                      <Icon name="icon-bar-chart" size={18} />
+                    </div>
+                    <div className="quick-link-content">
+                      <div className="quick-link-title">{item.title}</div>
+                      <div className="quick-link-desc">{item.description}</div>
+                    </div>
+                    <span className="quick-link-arrow">→</span>
+                  </Link>
+                ))}
+              </div>
+            </article>
+          ) : null}
 
+          {hasAsignacion ? (
+            <article className="content-card">
+              <h3>5 turnos por iniciar</h3>
+              <p className="text-secondary">Vista rapida de los proximos turnos operativos programados.</p>
+              <div className="turn-preview-list">
+                {upcomingTurns.length ? (
+                  upcomingTurns.map((turn) => (
+                    <article className="turn-preview-item" key={turn.id}>
+                      <div className={`turn-preview-icon turn-preview-icon--${turn.accent}`}>
+                        <Icon name="icon-bar-chart" size={16} />
+                      </div>
+                      <div className="turn-preview-body">
+                        <div className="turn-preview-title">{turn.responsable}</div>
+                        <div className="turn-preview-meta">{`${turn.titulo} · ${turn.ubicacion}`}</div>
+                        <div className="turn-preview-meta">{`${turn.horario} · Estado: ${turn.estado}`}</div>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-state-title">Sin turnos proximos</div>
+                    <div className="empty-state-desc">No hay turnos pendientes o asignados para mostrar.</div>
+                  </div>
+                )}
+              </div>
+            </article>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* Signal strip — solo si tiene módulos con datos */}
+      {dashboardSignals.length > 0 ? (
+        <section className="dashboard-signal-strip">
+          {dashboardSignals.map((signal) => (
+            <article className="signal-chip" key={signal.label}>
+              <strong>{signal.value}</strong>
+              <span>{signal.label}</span>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {/* Asignaciones por punto — solo si tiene asignacion-turnos */}
+      {hasAsignacion ? (
       <section className="dashboard-grid">
         <article className="content-panel">
           <header className="content-panel__header">
@@ -445,6 +446,7 @@ export default function DashboardHomePage() {
           </div>
         </article>
       </section>
+      ) : null}
     </div>
   )
 }
