@@ -1421,25 +1421,52 @@ export default function TurnAssignmentsPage() {
         onClose={() => { setShowCreateModal(false); setCreateForm({ assignedToUserIds: [], titulo: 'Manana', fecha: '', hora: '06:00', horaFin: '14:00', locationId: '', descripcion: '' }) }}
       >
         <div className="assignment-modal">
-          <label className="filter-toolbar__field">
-            <span>Empleados ({createForm.assignedToUserIds.length} seleccionados)</span>
+          {/* Supervisores */}
+          <label className="filter-toolbar__field filter-toolbar__field--full">
+            <span style={{color:'var(--clr-purple-mid)', fontWeight:700}}>Supervisores</span>
             <div className="worker-checklist">
-              {workers.length ? workers.map((w) => (
-                <label key={w.id} className="worker-checklist__item">
-                  <input
-                    type="checkbox"
-                    checked={createForm.assignedToUserIds.includes(w.id)}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...createForm.assignedToUserIds, w.id]
-                        : createForm.assignedToUserIds.filter((id) => id !== w.id)
-                      setCreateForm((c) => ({ ...c, assignedToUserIds: next }))
-                    }}
-                  />
-                  <span>{w.nombreCompleto}</span>
-                  <span className="worker-checklist__cargo">{w.cargo}</span>
-                </label>
-              )) : <span className="worker-checklist__empty">Sin empleados registrados.</span>}
+              {workers.filter((w) => w.role === 'supervisor' || w.cargo?.toLowerCase().includes('supervisor')).length
+                ? workers.filter((w) => w.role === 'supervisor' || w.cargo?.toLowerCase().includes('supervisor')).map((w) => (
+                  <label key={w.id} className="worker-checklist__item">
+                    <input
+                      type="checkbox"
+                      checked={createForm.assignedToUserIds.includes(w.id)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...createForm.assignedToUserIds, w.id]
+                          : createForm.assignedToUserIds.filter((id) => id !== w.id)
+                        setCreateForm((c) => ({ ...c, assignedToUserIds: next }))
+                      }}
+                    />
+                    <span>{w.nombreCompleto}</span>
+                    <span className="worker-checklist__cargo" style={{color:'var(--clr-purple-mid)'}}>Supervisor</span>
+                  </label>
+                ))
+                : <span className="worker-checklist__empty">Sin supervisores registrados.</span>}
+            </div>
+          </label>
+          {/* Operativos */}
+          <label className="filter-toolbar__field filter-toolbar__field--full">
+            <span style={{fontWeight:700}}>Empleados operativos</span>
+            <div className="worker-checklist">
+              {workers.filter((w) => w.role === 'operativo' && !w.cargo?.toLowerCase().includes('supervisor')).length
+                ? workers.filter((w) => w.role === 'operativo' && !w.cargo?.toLowerCase().includes('supervisor')).map((w) => (
+                  <label key={w.id} className="worker-checklist__item">
+                    <input
+                      type="checkbox"
+                      checked={createForm.assignedToUserIds.includes(w.id)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...createForm.assignedToUserIds, w.id]
+                          : createForm.assignedToUserIds.filter((id) => id !== w.id)
+                        setCreateForm((c) => ({ ...c, assignedToUserIds: next }))
+                      }}
+                    />
+                    <span>{w.nombreCompleto}</span>
+                    <span className="worker-checklist__cargo">{w.cargo}</span>
+                  </label>
+                ))
+                : <span className="worker-checklist__empty">Sin empleados registrados.</span>}
             </div>
           </label>
           <label className="filter-toolbar__field">
