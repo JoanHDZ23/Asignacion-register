@@ -98,3 +98,29 @@
   }
   .modal__header { position: sticky; top: 0; background: #fff; padding-bottom: .75rem; z-index: 1; }
 }
+
+/* ─── Mobile 430px — botones, formularios, modal ─────────── */
+@media (max-width: 430px) {
+  /* Botones: targets táctiles mínimos 44px */
+  .button--sm { padding: .55rem 1rem; min-height: 40px; font-size: 13.5px; }
+  .button--md { padding: .75rem 1.15rem; min-height: 44px; }
+  .button--lg { padding: .85rem 1.35rem; min-height: 48px; }
+
+  /* Formularios */
+  .custom-form__control { padding: .75rem .9rem; font-size: 15px; min-height: 44px; }
+  .custom-form__control--textarea { min-height: 7rem; }
+  .custom-form__actions { flex-direction: column-reverse; }
+  .custom-form__actions .button { width: 100%; min-height: 44px; }
+
+  /* Modal: más espacio vertical */
+  .modal__surface { max-height: 95vh; padding: 1rem .9rem; }
+  .modal__header h3 { font-size: 15px; }
+  .modal__header p  { font-size: 12px; }
+}
+
+/* ─── Mobile 360px — ajuste fino ─────────────────────────── */
+@media (max-width: 360px) {
+  .button--sm { font-size: 12.5px; padding: .5rem .85rem; }
+  .custom-form__control { font-size: 14.5px; }
+  .modal__surface { padding: .85rem .7rem; }
+}

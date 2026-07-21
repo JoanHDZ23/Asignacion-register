@@ -82,41 +82,49 @@ function isWithinConfirmWindow(deadline: string | undefined): boolean {
 /**
  * Devuelve las horas trabajadas en un turno.
  * REGLAS:
- * - Solo cuenta si el turno está confirmado o finalizado (supervisor aprobó el ingreso).
- * - Si el empleado marcó entrada pero el supervisor no confirmó → 0h (no cuenta).
- * - Si está finalizado con checkIn+checkOut reales → usa la diferencia real.
- * - Si está confirmado sin checkOut → se detiene en horaFin programada (auto-salida).
+ * - Usa siempre checkIn y checkOut reales cuando ambos existen.
+ * - Si hay checkIn pero no checkOut y el turno es confirmado/finalizado
+ *   → auto-salida a horaFin programada (maneja turnos nocturnos cruzando medianoche).
+ * - Si el turno no está confirmado ni finalizado → 0h (no cuenta).
  */
 function calcTurnHours(turn: TurnAssignment): number {
-  const att = turn.attendance
+  const att    = turn.attendance
   const estado = turn.estado
 
-  // No cuenta si no fue confirmado/finalizado por el supervisor
-  if (estado !== 'confirmado' && estado !== 'finalizado') return 0
+  const checkInMs  = att?.checkIn?.markedAt  ? new Date(att.checkIn.markedAt).getTime()  : null
+  const checkOutMs = att?.checkOut?.markedAt ? new Date(att.checkOut.markedAt).getTime() : null
 
-  const checkInTime = att?.checkIn?.markedAt ? new Date(att.checkIn.markedAt).getTime() : null
-  if (!checkInTime) return 0
-
-  // Si hay checkOut real → usa la diferencia real
-  if (att?.checkOut?.markedAt) {
-    const diff = new Date(att.checkOut.markedAt).getTime() - checkInTime
-    return diff > 0 ? diff / 3_600_000 : 0
+  // ── Caso 1: tenemos checkIn Y checkOut reales → siempre usa la diferencia real
+  if (checkInMs && checkOutMs) {
+    const diff = checkOutMs - checkInMs
+    return diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
   }
 
-  // Sin checkOut → auto-salida a la horaFin programada
-  // Extrae horaFin del campo horario ("HH:MM - HH:MM") o del turno directamente
-  const parts = turn.horario.split(' - ')
-  const horaFinStr = parts[1]?.trim()
-  const fechaStr   = turn.fecha
+  // ── Caso 2: sin checkIn → no hay horas
+  if (!checkInMs) return 0
 
-  if (horaFinStr && fechaStr) {
+  // ── Caso 3: checkIn pero sin checkOut → solo cuenta si confirmado/finalizado
+  if (estado !== 'confirmado' && estado !== 'finalizado') return 0
+
+  // Auto-salida a horaFin programada (maneja turno nocturno: fin < inicio)
+  const parts   = turn.horario.split(' - ')
+  const horaInStr  = parts[0]?.trim()
+  const horaFinStr = parts[1]?.trim()
+
+  if (horaFinStr && horaFinStr && turn.fecha) {
+    const [sh, sm] = (horaInStr ?? '').split(':').map(Number)
     const [eh, em] = horaFinStr.split(':').map(Number)
-    if (!Number.isNaN(eh) && !Number.isNaN(em)) {
-      const scheduledEnd = new Date(`${fechaStr}T${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}:00`).getTime()
-      // Usa el menor entre ahora y la hora de fin programada
+
+    if (!Number.isNaN(sh) && !Number.isNaN(eh)) {
+      let scheduledEnd = new Date(`${turn.fecha}T${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}:00`).getTime()
+      const scheduledStart = new Date(`${turn.fecha}T${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')}:00`).getTime()
+
+      // Turno nocturno: si el fin es menor al inicio, el fin es al día siguiente
+      if (scheduledEnd <= scheduledStart) scheduledEnd += 24 * 3_600_000
+
       const effectiveEnd = Math.min(scheduledEnd, Date.now())
-      const diff = effectiveEnd - checkInTime
-      return diff > 0 ? diff / 3_600_000 : 0
+      const diff = effectiveEnd - checkInMs
+      return diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
     }
   }
 
@@ -351,8 +359,11 @@ export default function TurnAssignmentsPage() {
   ], [turns])
 
   // ── Horas por día y mes ─────────────────────────────────────────────────
-  // Operativo → sus turnos. Admin/supervisor → turnos visibles de su operación.
-  const myHoursBase = useMemo(() => myTurns, [myTurns])   // siempre las horas propias
+  // Admin → todos los turnos. Supervisor/operativo → sus propios turnos.
+  const myHoursBase = useMemo(
+    () => isAdmin ? turns : myTurns,
+    [isAdmin, turns, myTurns]
+  )
 
   // Mes seleccionado para el filtro del resumen diario
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {

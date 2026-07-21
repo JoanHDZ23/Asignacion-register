@@ -153,19 +153,31 @@ export default function AttendanceAdminPage() {
     return [...set].sort().reverse()
   }, [turns])
 
-  // Horas efectivas de un turno (real checkIn→checkOut; auto-salida a horaFin si no hay checkOut)
+  // Horas efectivas de un turno — usa checkIn/checkOut reales; maneja turnos nocturnos
   const calcHours = (turn: TurnResponse): number => {
     const ci = turn.attendance?.checkIn?.markedAt
     if (!ci) return 0
+    const ciMs = new Date(ci).getTime()
+
     const co = turn.attendance?.checkOut?.markedAt
-    const endMs = co
-      ? new Date(co).getTime()
-      : (() => {
-          if (!turn.horaFin) return Date.now()
-          const scheduled = new Date(`${turn.fecha}T${turn.horaFin}:00`).getTime()
-          return Math.min(scheduled, Date.now())
-        })()
-    const diff = endMs - new Date(ci).getTime()
+    if (co) {
+      const diff = new Date(co).getTime() - ciMs
+      return diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
+    }
+
+    // Sin checkOut: auto-salida a horaFin programada (con soporte nocturno)
+    if (!turn.horaFin || !turn.hora) return 0
+    const [sh, sm] = turn.hora.split(':').map(Number)
+    const [eh, em] = turn.horaFin.split(':').map(Number)
+    if (Number.isNaN(sh) || Number.isNaN(eh)) return 0
+
+    let scheduledEnd   = new Date(`${turn.fecha}T${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}:00`).getTime()
+    const scheduledStart = new Date(`${turn.fecha}T${String(sh).padStart(2,'0')}:${String(sm).padStart(2,'0')}:00`).getTime()
+    // Turno nocturno: fin al día siguiente
+    if (scheduledEnd <= scheduledStart) scheduledEnd += 24 * 3_600_000
+
+    const effectiveEnd = Math.min(scheduledEnd, Date.now())
+    const diff = effectiveEnd - ciMs
     return diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
   }
 
