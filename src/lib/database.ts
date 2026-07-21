@@ -550,21 +550,31 @@ function turnToRemoteRow(turn: Turn) {
     turn.attendance?.checkIn?.facialPhotoUrl ??
     ''
 
+  // Formatea un timestamp ISO a hora local HH:MM
+  const fmtTime = (iso: string | undefined) => {
+    if (!iso) return ''
+    try {
+      return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })
+    } catch { return '' }
+  }
+
   return {
-    id_asignacion: turn.id,
-    id_usuario: turn.assignedToUserId ?? '',
-    id_ubicacion: turn.locationId ?? '',
-    fecha: turn.fecha,
+    id_asignacion:        turn.id,
+    id_usuario:           turn.assignedToUserId ?? '',
+    id_ubicacion:         turn.locationId ?? '',
+    fecha:                turn.fecha,
     hora_entrada_esperada: turn.hora,
-    hora_salida_esperada: turn.horaFin ?? '',
-    tiempo_descanso: '',
-    estado_turno: turn.estado,
-    titulo: turn.titulo,
-    descripcion: turn.descripcion ?? '',
-    creado_por: turn.creadoPorUserId,
-    created_at: turn.createdAt,
-    updated_at: turn.updatedAt,
-    registro_facial: facialUrl,
+    hora_salida_esperada:  turn.horaFin ?? '',
+    tiempo_descanso:      '',
+    hora_entrada_real:    fmtTime(turn.attendance?.checkIn?.markedAt),
+    hora_salida_real:     fmtTime(turn.attendance?.checkOut?.markedAt),
+    estado_turno:         turn.estado,
+    titulo:               turn.titulo,
+    descripcion:          turn.descripcion ?? '',
+    creado_por:           turn.creadoPorUserId,
+    created_at:           turn.createdAt,
+    updated_at:           turn.updatedAt,
+    registro_facial:      facialUrl,
   }
 }
 
