@@ -1,7 +1,7 @@
 import type { AccessModule } from './access'
 
-export const API_BASE_URL = 'http://localhost:4000/api'
-export const API_DOCS_URL = 'http://localhost:4000/api-docs/'
+export const API_BASE_URL = 'https://asignacion-register.onrender.com/api'
+export const API_DOCS_URL = 'https://asignacion-register.onrender.com/api-docs/'
 
 type ApiOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
