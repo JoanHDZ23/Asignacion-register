@@ -3,7 +3,7 @@
  * 1. Auto-cerrar turnos sin salida marcada (30 min después de horaFin)
  * 2. Auto-rechazar turnos no confirmados antes de su deadline
  */
-import { readDatabase, updateTurn } from '../lib/database.js'
+import { readDatabase, registerHorasTurno, updateTurn } from '../lib/database.js'
 import type { AttendanceRecord, Turn } from '../types.js'
 
 const AUTO_CLOSE_GRACE_MINUTES = 30
@@ -69,6 +69,14 @@ export async function runAutoCloseShifts() {
             turn.estado = 'finalizado'
             turn.updatedAt = new Date().toISOString()
             await updateTurn(turn)
+            // Registra las horas trabajadas
+            const assignedUser = db.users.find((u) => u.id === turn.assignedToUserId)
+            await registerHorasTurno({
+              turn,
+              userName: assignedUser?.nombreCompleto ?? turn.assignedToUserName ?? '',
+              cargo: assignedUser?.cargo ?? '',
+              locationNombre: turn.locationNombre,
+            })
             closedCount++
           }
         }

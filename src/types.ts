@@ -153,6 +153,67 @@ export type DatabaseSchema = {
   locations: Location[]
   turns: Turn[]
   userInvitations: UserInvitation[]
+  horasTurno: HorasTurnoRecord[]
+  facturas: Factura[]
+}
+
+export type HorasTurnoRecord = {
+  id: string
+  companyId: string
+  facturaId?: string
+  turnId: string
+  userId: string
+  nombreUsuario: string
+  cargo: string
+  locationId?: string
+  nombreUbicacion?: string
+  fecha: string
+  diaSemana: string                    // 'lunes' | 'martes' | ... | 'domingo'
+  esDominical: boolean                 // true si es domingo
+  esFestivo: boolean                   // true si es día festivo
+  horaEntradaEsperada: string
+  horaSalidaEsperada?: string
+  horaEntradaReal?: string
+  horaSalidaReal?: string
+  horasTrabajadas: number              // Total horas del turno
+  horasOrdinarias: number              // Horas en día laboral normal
+  horasDominicales: number             // Horas en domingo
+  horasFestivas: number                // Horas en festivo
+  metodoSalida?: 'webauthn' | 'pin' | 'auto'
+  valorHora?: number                   // Tarifa hora ordinaria
+  recargoDominical?: number            // % recargo dominical (default 75%)
+  recargoFestivo?: number              // % recargo festivo (default 100%)
+  subtotalOrdinario?: number           // horasOrdinarias × valorHora
+  subtotalDominical?: number           // horasDominicales × valorHora × (1 + recargoDominical/100)
+  subtotalFestivo?: number             // horasFestivas × valorHora × (1 + recargoFestivo/100)
+  subtotal?: number                    // Suma de los tres subtotales
+  estadoTurno: string
+  confirmadoPor?: string
+  createdAt: string
+}
+
+export type FacturaEstado = 'borrador' | 'emitida' | 'pagada' | 'anulada'
+
+export type Factura = {
+  id: string
+  companyId: string
+  periodoMes: string
+  fechaGeneracion: string
+  totalHoras: number
+  totalHorasOrdinarias: number
+  totalHorasDominicales: number
+  totalHorasFestivas: number
+  totalValorOrdinario: number
+  totalValorDominicales: number
+  totalValorFestivos: number
+  totalValor: number
+  moneda: string
+  recargoDominical: number             // % aplicado (default 75)
+  recargoFestivo: number               // % aplicado (default 100)
+  estado: FacturaEstado
+  observaciones?: string
+  generadoPor: string
+  createdAt: string
 }
 
 export type AuthUser = {

@@ -17,7 +17,7 @@ const dataDirectory = path.resolve(process.cwd(), 'data')
 const databasePath = path.join(dataDirectory, 'db.json')
 const remoteDatabaseUrl =
   process.env.APPS_SCRIPT_DB_URL ??
-  'https://script.google.com/macros/s/AKfycbzQJMq7DlAXbJ7uqaivBIXz2gn-hytkAxnQxM5zTVI9wMRWsw4GepK2X-2cPOWZIG2C/exec'
+  'https://script.google.com/macros/s/AKfycbzfpyXoYZdDTbEovZKwAZqz7vQazKGhChFkcQ0uU2VGDscWfmP6MHExRDs7TyZNrwuI/exec'
 
 const defaultDatabase: DatabaseSchema = {
   companies: [],
@@ -26,6 +26,8 @@ const defaultDatabase: DatabaseSchema = {
   locations: [],
   turns: [],
   userInvitations: [],
+  horasTurno: [],
+  facturas: [],
 }
 
 const defaultPositionPermissions: AccessModule[] = ['dashboard', 'asignacion-turnos']
@@ -144,6 +146,8 @@ async function readLocalDatabase() {
       locations: parsed.locations ?? [],
       turns: parsed.turns ?? [],
       userInvitations: parsed.userInvitations ?? [],
+      horasTurno: parsed.horasTurno ?? [],
+      facturas: parsed.facturas ?? [],
     }
   } catch {
     return cloneDefaultDatabase()
@@ -720,6 +724,8 @@ export async function readDatabase() {
         locations: mergeRemoteSimpleFields(localDb.locations, remoteLocations),
         turns,
         userInvitations: localDb.userInvitations,
+        horasTurno: localDb.horasTurno,
+        facturas: localDb.facturas,
       }
     }
   } catch (error) {
@@ -1074,4 +1080,122 @@ export async function deleteLocation(locationId: string, companyId: string) {
     (loc) => !(loc.id === locationId && loc.companyId === companyId),
   )
   await writeLocalDatabase(db)
+}
+
+
+// ── Festivos Colombia (actualizables por año) ────────────────────────────
+const festivosColombia2026 = new Set([
+  '2026-01-01', '2026-01-12', '2026-03-23', '2026-04-02', '2026-04-03',
+  '2026-05-01', '2026-05-18', '2026-06-08', '2026-06-15', '2026-06-29',
+  '2026-07-20', '2026-08-07', '2026-08-17', '2026-10-12', '2026-11-02',
+  '2026-11-16', '2026-12-08', '2026-12-25',
+])
+
+function esFestivoColombia(fecha: string): boolean {
+  return festivosColombia2026.has(fecha)
+}
+
+function getDiaSemana(fecha: string): string {
+  const dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
+  const d = new Date(fecha + 'T12:00:00')
+  return dias[d.getDay()] ?? ''
+}
+
+// ── Horas por turno — registro automático al finalizar ───────────────
+
+export async function registerHorasTurno(params: {
+  turn: import('../types.js').Turn
+  userName: string
+  cargo: string
+  locationNombre?: string
+  valorHora?: number
+  confirmadoPor?: string
+  recargoDominical?: number
+  recargoFestivo?: number
+}) {
+  const { turn, userName, cargo, locationNombre, valorHora, confirmadoPor } = params
+  const recargoDominical = params.recargoDominical ?? 75   // 75% por defecto
+  const recargoFestivo   = params.recargoFestivo ?? 100    // 100% por defecto
+  const checkIn  = turn.attendance?.checkIn?.markedAt
+  const checkOut = turn.attendance?.checkOut?.markedAt
+
+  if (!checkIn) return null
+
+  // Calcula horas reales
+  let horasTrabajadas = 0
+  if (checkIn && checkOut) {
+    const diff = new Date(checkOut).getTime() - new Date(checkIn).getTime()
+    horasTrabajadas = diff > 0 ? Math.round((diff / 3_600_000) * 100) / 100 : 0
+  }
+
+  // Determina tipo de día
+  const diaSemana   = getDiaSemana(turn.fecha)
+  const esDominical = diaSemana === 'domingo'
+  const esFestivo   = esFestivoColombia(turn.fecha)
+
+  // Desglose de horas
+  let horasOrdinarias = 0
+  let horasDominicales = 0
+  let horasFestivas = 0
+
+  if (esFestivo) {
+    horasFestivas = horasTrabajadas
+  } else if (esDominical) {
+    horasDominicales = horasTrabajadas
+  } else {
+    horasOrdinarias = horasTrabajadas
+  }
+
+  // Cálculos de valor
+  const subtotalOrdinario  = valorHora ? Math.round(horasOrdinarias * valorHora * 100) / 100 : undefined
+  const subtotalDominical  = valorHora ? Math.round(horasDominicales * valorHora * (1 + recargoDominical / 100) * 100) / 100 : undefined
+  const subtotalFestivo    = valorHora ? Math.round(horasFestivas * valorHora * (1 + recargoFestivo / 100) * 100) / 100 : undefined
+  const subtotal           = valorHora ? (subtotalOrdinario ?? 0) + (subtotalDominical ?? 0) + (subtotalFestivo ?? 0) : undefined
+
+  const fmtTime = (iso: string | undefined) => {
+    if (!iso) return undefined
+    try {
+      return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })
+    } catch { return undefined }
+  }
+
+  const record: import('../types.js').HorasTurnoRecord = {
+    id: `ht-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    companyId: turn.companyId,
+    turnId: turn.id,
+    userId: turn.assignedToUserId ?? '',
+    nombreUsuario: userName || turn.assignedToUserName || '',
+    cargo,
+    locationId: turn.locationId,
+    nombreUbicacion: locationNombre ?? turn.locationNombre,
+    fecha: turn.fecha,
+    diaSemana,
+    esDominical,
+    esFestivo,
+    horaEntradaEsperada: turn.hora,
+    horaSalidaEsperada: turn.horaFin,
+    horaEntradaReal: fmtTime(checkIn),
+    horaSalidaReal: fmtTime(checkOut),
+    horasTrabajadas,
+    horasOrdinarias,
+    horasDominicales,
+    horasFestivas,
+    metodoSalida: turn.attendance?.checkOut?.method,
+    valorHora,
+    recargoDominical,
+    recargoFestivo,
+    subtotalOrdinario,
+    subtotalDominical,
+    subtotalFestivo,
+    subtotal,
+    estadoTurno: turn.estado,
+    confirmadoPor,
+    createdAt: new Date().toISOString(),
+  }
+
+  const db = await readLocalDatabase()
+  db.horasTurno.push(record)
+  await writeLocalDatabase(db)
+
+  return record
 }
