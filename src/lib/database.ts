@@ -320,6 +320,34 @@ async function postAppsScript(
 }
 
 function mapCompanyRow(row: Record<string, unknown>): Company {
+  // Parse settings JSON si viene de Sheets
+  let settings: Company['settings'] = {
+    requireBiometric: true,
+    requirePhoto: true,
+    requireLocationValidation: true,
+    allowAutoCloseMinutes: 30,
+    defaultConfirmHoursLimit: 4,
+    timezone: 'America/Bogota',
+  }
+  try {
+    const rawSettings = row.settings_json ?? row.settings
+    if (typeof rawSettings === 'string' && rawSettings.trim()) {
+      settings = { ...settings, ...JSON.parse(rawSettings) }
+    } else if (typeof rawSettings === 'object' && rawSettings) {
+      settings = { ...settings, ...(rawSettings as object) }
+    }
+  } catch { /* usa defaults */ }
+
+  let enabledModules: Company['enabledModules'] = ['dashboard', 'asignacion-turnos', 'gestion-asistencia']
+  try {
+    const rawModules = row.enabled_modules ?? row.enabledModules
+    if (typeof rawModules === 'string' && rawModules.trim()) {
+      enabledModules = JSON.parse(rawModules)
+    } else if (Array.isArray(rawModules)) {
+      enabledModules = rawModules as Company['enabledModules']
+    }
+  } catch { /* usa defaults */ }
+
   return {
     id: getString(row.id_compania ?? row.company_id ?? row['ID Empresa'] ?? row.id),
     nombre: getString(row.nombre_empresa ?? row['Nombre Empresa'] ?? row.nombre ?? ''),
@@ -328,6 +356,9 @@ function mapCompanyRow(row: Record<string, unknown>): Company {
     telefono: getOptionalString(row.telefono ?? row['Telefono Empresa'] ?? row.Telefono),
     direccion: getOptionalString(row.direccion ?? row.Direccion),
     ciudad: getOptionalString(row.ciudad ?? row.Ciudad),
+    tipo: (getString(row.tipo ?? 'empresa') as Company['tipo']) || 'empresa',
+    enabledModules,
+    settings,
     createdAt: getString(
       row.created_at ?? row['Creado En'] ?? row['Fecha Creacion'] ?? new Date().toISOString(),
     ),
@@ -343,6 +374,9 @@ function companyToRemoteRow(company: Company) {
     telefono: company.telefono ?? '',
     direccion: company.direccion ?? '',
     ciudad: company.ciudad ?? '',
+    tipo: company.tipo ?? 'empresa',
+    enabled_modules: JSON.stringify(company.enabledModules ?? []),
+    settings_json: JSON.stringify(company.settings ?? {}),
     created_at: company.createdAt,
   }
 }

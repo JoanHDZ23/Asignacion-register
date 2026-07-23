@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { signToken } from '../lib/auth.js'
-import { resolveAllowedModules } from '../lib/access.js'
+import { getDefaultModulesByType, getDefaultSettings, resolveAllowedModules } from '../lib/access.js'
 import {
   createCompany,
   createUser,
@@ -8,6 +8,7 @@ import {
   readDatabase,
   updateUserInvitation,
 } from '../lib/database.js'
+import type { CompanyType } from '../types.js'
 
 export const authRouter = Router()
 
@@ -19,6 +20,7 @@ authRouter.post('/register-company', async (request, response) => {
     telefonoEmpresa,
     direccionEmpresa,
     ciudadEmpresa,
+    tipo,
     adminNombreCompleto,
     adminCorreo,
     adminTelefono,
@@ -39,6 +41,8 @@ authRouter.post('/register-company', async (request, response) => {
     response.status(400).json({ message: 'Faltan datos para registrar la empresa.' })
     return
   }
+
+  const companyType: CompanyType = tipo === 'academia' ? 'academia' : 'empresa'
 
   const db = await readDatabase()
   const duplicatedCompany = db.companies.find(
@@ -68,6 +72,9 @@ authRouter.post('/register-company', async (request, response) => {
     telefono: telefonoEmpresa,
     direccion: direccionEmpresa,
     ciudad: ciudadEmpresa,
+    tipo: companyType,
+    enabledModules: getDefaultModulesByType(companyType),
+    settings: getDefaultSettings(companyType),
     createdAt: new Date().toISOString(),
   })
 

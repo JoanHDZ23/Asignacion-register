@@ -1,10 +1,37 @@
-import type { AccessModule, DatabaseSchema, User } from '../types.js'
+import type { AccessModule, CompanySettings, CompanyType, DatabaseSchema, User } from '../types.js'
 
-export const allAccessModules: AccessModule[] = [
+export const empresaModules: AccessModule[] = [
   'dashboard',
   'asignacion-turnos',
   'gestion-asistencia',
+  'facturacion',
+  'informes',
+  'configuracion',
 ]
+
+export const academiaModules: AccessModule[] = [
+  'dashboard',
+  'horarios',
+  'asistencia-clases',
+  'calificaciones',
+  'informes',
+  'configuracion',
+]
+
+export function getDefaultModulesByType(tipo: CompanyType): AccessModule[] {
+  return tipo === 'academia' ? academiaModules : empresaModules
+}
+
+export function getDefaultSettings(tipo: CompanyType): CompanySettings {
+  return {
+    requireBiometric: tipo === 'empresa',
+    requirePhoto: true,
+    requireLocationValidation: true,
+    allowAutoCloseMinutes: 30,
+    defaultConfirmHoursLimit: 4,
+    timezone: 'America/Bogota',
+  }
+}
 
 export function resolveCompanyIdForUser(db: DatabaseSchema, user: User | undefined) {
   if (!user) {
@@ -16,12 +43,13 @@ export function resolveCompanyIdForUser(db: DatabaseSchema, user: User | undefin
 
 export function resolveAllowedModules(db: DatabaseSchema, user: User) {
   if (user.role === 'admin') {
-    return allAccessModules
+    // Admin ve los módulos habilitados de su empresa
+    const company = db.companies.find((c) => c.id === user.companyId)
+    return company?.enabledModules?.length ? company.enabledModules : empresaModules
   }
 
-  // Supervisor: acceso a dashboard y asignacion de turnos (solo lectura + confirmar)
   if (user.role === 'supervisor') {
-    return ['dashboard', 'asignacion-turnos'] satisfies AccessModule[]
+    return ['dashboard', 'asignacion-turnos', 'gestion-asistencia'] satisfies AccessModule[]
   }
 
   const position = user.positionId

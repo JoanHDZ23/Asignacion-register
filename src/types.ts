@@ -1,8 +1,9 @@
-export type UserRole = 'admin' | 'supervisor' | 'operativo'
+export type UserRole = 'admin' | 'supervisor' | 'operativo' | 'docente' | 'estudiante'
 export type TurnStatus = 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado'
 export type InvitationStatus = 'pendiente' | 'completada' | 'cancelada'
-export type AccessModule = 'dashboard' | 'asignacion-turnos' | 'gestion-asistencia'
+export type AccessModule = 'dashboard' | 'asignacion-turnos' | 'gestion-asistencia' | 'horarios' | 'asistencia-clases' | 'calificaciones' | 'informes' | 'facturacion' | 'configuracion'
 export type AttendanceAction = 'entrada' | 'salida'
+export type CompanyType = 'empresa' | 'academia'
 
 export type StoredWebAuthnCredential = {
   id: string
@@ -47,6 +48,16 @@ export type TurnAttendance = {
   checkOut?: AttendanceRecord
 }
 
+export type CompanySettings = {
+  requireBiometric: boolean
+  requirePhoto: boolean
+  requireLocationValidation: boolean
+  allowAutoCloseMinutes: number
+  defaultConfirmHoursLimit: number
+  billingRateDefault?: number
+  timezone: string
+}
+
 export type Company = {
   id: string
   nombre: string
@@ -55,6 +66,9 @@ export type Company = {
   telefono?: string
   direccion?: string
   ciudad?: string
+  tipo: CompanyType
+  enabledModules: AccessModule[]
+  settings: CompanySettings
   createdAt: string
 }
 
