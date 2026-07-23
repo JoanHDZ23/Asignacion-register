@@ -79,7 +79,7 @@ export default function AttendanceAdminPage() {
 
   // Multi-employee turn form state
   const [turnForm, setTurnForm] = useState({
-    titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '',
+    titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4',
   })
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([])
   const [turnConflicts, setTurnConflicts] = useState<string[]>([])
@@ -449,6 +449,7 @@ export default function AttendanceAdminPage() {
             fecha: turnForm.fecha, hora: turnForm.hora,
             horaFin: turnForm.horaFin || undefined,
             assignedToUserId: workerId, locationId: turnForm.locationId,
+            confirmHoursLimit: Number(turnForm.confirmHoursLimit) || 4,
           },
         })
         created++
@@ -466,7 +467,7 @@ export default function AttendanceAdminPage() {
           : `${created} turno(s) "${turnForm.titulo}" registrados correctamente.`,
       })
       setActiveModal(null)
-      setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '' })
+      setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4' })
       setSelectedWorkerIds([])
       setTurnConflicts([])
       await loadAdminData()
@@ -507,7 +508,7 @@ export default function AttendanceAdminPage() {
   }
 
   const resetTurnModal = () => {
-    setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '' })
+    setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4' })
     setSelectedWorkerIds([])
     setTurnConflicts([])
     setActiveModal(null)
@@ -1071,6 +1072,18 @@ export default function AttendanceAdminPage() {
               <span>Hora fin</span>
               <input type="time" value={turnForm.horaFin}
                 onChange={(e) => setTurnForm((f) => ({ ...f, horaFin: e.target.value }))} />
+            </label>
+            <label className="turn-form__field">
+              <span>Horas para confirmar</span>
+              <select value={turnForm.confirmHoursLimit}
+                onChange={(e) => setTurnForm((f) => ({ ...f, confirmHoursLimit: e.target.value }))}>
+                <option value="1">1 hora antes</option>
+                <option value="2">2 horas antes</option>
+                <option value="4">4 horas antes</option>
+                <option value="6">6 horas antes</option>
+                <option value="8">8 horas antes</option>
+                <option value="12">12 horas antes</option>
+              </select>
             </label>
             <label className="turn-form__field turn-form__field--full">
               <span>Ubicacion <span className="req">*</span></span>

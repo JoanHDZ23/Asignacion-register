@@ -154,6 +154,8 @@ export type TurnResponse = {
   locationId?: string
   locationNombre?: string
   confirmedDeadline?: string
+  confirmHoursLimit?: number
+  rejectionReason?: string
   attendance?: {
     checkIn?: {
       action: 'entrada'
