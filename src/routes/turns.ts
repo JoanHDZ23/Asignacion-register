@@ -171,7 +171,7 @@ turnsRouter.patch('/:turnId/assign', requireRole(['admin']), async (request, res
 
 turnsRouter.patch('/:turnId/status', async (request, response) => {
   const { turnId } = request.params
-  const { estado } = request.body as { estado?: TurnStatus }
+  const { estado, rejectionReason } = request.body as { estado?: TurnStatus; rejectionReason?: string }
 
   if (!estado) {
     response.status(400).json({ message: 'El estado es requerido.' })
@@ -189,6 +189,12 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
 
   if (!allowedStatus.includes(estado)) {
     response.status(400).json({ message: 'Estado de turno no valido.' })
+    return
+  }
+
+  // Rechazo requiere motivo escrito
+  if (estado === 'rechazado' && (!rejectionReason || !rejectionReason.trim())) {
+    response.status(400).json({ message: 'Debes indicar el motivo del rechazo.' })
     return
   }
 
@@ -221,6 +227,9 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
   }
 
   turn.estado = estado
+  if (estado === 'rechazado' && rejectionReason) {
+    turn.rejectionReason = rejectionReason.trim()
+  }
   turn.updatedAt = new Date().toISOString()
   await updateTurn(turn)
 

@@ -110,7 +110,8 @@ export type Turn = {
   assignedToUserName?: string
   locationId?: string
   locationNombre?: string
-  confirmedDeadline?: string   // ISO — 4h antes de la hora del turno, límite para confirmar
+  confirmedDeadline?: string
+  rejectionReason?: string         // Motivo del rechazo (obligatorio al rechazar)
   attendance?: TurnAttendance
   createdAt: string
   updatedAt: string
