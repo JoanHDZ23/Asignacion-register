@@ -36,7 +36,7 @@ export type AttendanceLocationCheck = {
 export type AttendanceRecord = {
   action: AttendanceAction
   markedAt: string
-  method: 'webauthn' | 'pin'
+  method: 'webauthn' | 'pin' | 'auto'
   credentialId: string
   locationCheck: AttendanceLocationCheck
   facialPhotoUrl?: string
@@ -111,7 +111,8 @@ export type Turn = {
   locationId?: string
   locationNombre?: string
   confirmedDeadline?: string
-  rejectionReason?: string         // Motivo del rechazo (obligatorio al rechazar)
+  confirmHoursLimit?: number          // Horas antes del turno para confirmar (default 4)
+  rejectionReason?: string
   attendance?: TurnAttendance
   createdAt: string
   updatedAt: string

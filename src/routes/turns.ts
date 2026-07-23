@@ -6,10 +6,10 @@ import type { TurnStatus } from '../types.js'
 
 export const turnsRouter = Router()
 
-/** Calcula el deadline de confirmación: hora del turno - 4 horas. */
-function buildConfirmedDeadline(fecha: string, hora: string): string {
+/** Calcula el deadline de confirmación: hora del turno - N horas (default 4). */
+function buildConfirmedDeadline(fecha: string, hora: string, hoursLimit = 4): string {
   const turnStart = new Date(`${fecha}T${hora}:00`)
-  const deadline = new Date(turnStart.getTime() - 4 * 60 * 60 * 1000)
+  const deadline = new Date(turnStart.getTime() - hoursLimit * 60 * 60 * 1000)
   return deadline.toISOString()
 }
 
@@ -57,7 +57,7 @@ turnsRouter.get('/', async (request, response) => {
 })
 
 turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
-  const { titulo, descripcion, fecha, hora, horaFin, assignedToUserId, locationId } = request.body ?? {}
+  const { titulo, descripcion, fecha, hora, horaFin, assignedToUserId, locationId, confirmHoursLimit } = request.body ?? {}
 
   if (!titulo || !fecha || !hora || !assignedToUserId || !locationId) {
     response
@@ -65,6 +65,8 @@ turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
       .json({ message: 'Titulo, fecha, hora, trabajador y ubicacion son requeridos.' })
     return
   }
+
+  const hoursLimit = Number(confirmHoursLimit) || 4
 
   const db = await readDatabase()
   const currentUser = db.users.find((item) => item.id === request.authUser!.userId)
@@ -120,7 +122,8 @@ turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
     assignedToUserName: assignedUser.nombreCompleto,
     locationId,
     locationNombre: location.nombre,
-    confirmedDeadline: buildConfirmedDeadline(String(fecha), String(hora)),
+    confirmedDeadline: buildConfirmedDeadline(String(fecha), String(hora), hoursLimit),
+    confirmHoursLimit: hoursLimit,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })
@@ -308,7 +311,7 @@ turnsRouter.patch('/:turnId/reassign', requireRole(['admin']), async (request, r
   turn.assignedToUserId  = newWorker.id
   turn.assignedToUserName = newWorker.nombreCompleto
   turn.estado    = 'asignado'
-  turn.confirmedDeadline = buildConfirmedDeadline(turn.fecha, turn.hora)
+  turn.confirmedDeadline = buildConfirmedDeadline(turn.fecha, turn.hora, turn.confirmHoursLimit ?? 4)
   turn.updatedAt = new Date().toISOString()
 
   await updateTurn(turn)
