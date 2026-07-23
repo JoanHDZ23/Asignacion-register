@@ -78,6 +78,7 @@ export type Position = {
   nombre: string
   descripcion?: string
   permissions: AccessModule[]
+  valorHora?: number
   activa: boolean
   createdAt: string
 }
