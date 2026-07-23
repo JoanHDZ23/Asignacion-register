@@ -44,10 +44,10 @@ export function DashboardLayout() {
         {
           title: 'Operacion',
           items: [
-            ...(allowedModules.includes('asignacion-turnos')
+            ...(allowedModules.includes('turnos-fijos')
               ? [{ to: '/dashboard/asignacion-turnos', label: 'Asignacion de turnos', icon: 'icon-calendar' }]
               : []),
-            ...(isAdmin || isSupervisor || allowedModules.includes('gestion-asistencia')
+            ...(isAdmin || isSupervisor || allowedModules.includes('geolocalizacion')
               ? [{ to: '/dashboard/gestion-asistencia', label: 'Gestion de asistencia', icon: 'icon-clipboard' }]
               : []),
           ],
@@ -125,8 +125,8 @@ export function DashboardLayout() {
     const firstAllowedPath = navigationItems[0]?.to ?? '/dashboard'
 
     if (currentPath === '/dashboard' && allowedModules.includes('dashboard')) return
-    if (currentPath.includes('/dashboard/asignacion-turnos') && allowedModules.includes('asignacion-turnos')) return
-    if (currentPath.includes('/dashboard/gestion-asistencia') && (isAdmin || isSupervisor || allowedModules.includes('gestion-asistencia'))) return
+    if (currentPath.includes('/dashboard/asignacion-turnos') && allowedModules.includes('turnos-fijos')) return
+    if (currentPath.includes('/dashboard/gestion-asistencia') && (isAdmin || isSupervisor || allowedModules.includes('geolocalizacion'))) return
 
     navigate(firstAllowedPath, { replace: true })
   }, [allowedModules, isAdmin, location.pathname, navigate, navigationItems])

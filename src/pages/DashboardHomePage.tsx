@@ -22,8 +22,8 @@ export default function DashboardHomePage() {
     : getDefaultAllowedModules(currentUser?.role ?? 'operativo')
 
   // Permisos derivados
-  const hasGestion       = isAdmin || allowedModules.includes('gestion-asistencia')
-  const hasAsignacion    = allowedModules.includes('asignacion-turnos')
+  const hasGestion       = isAdmin || allowedModules.includes('geolocalizacion')
+  const hasAsignacion    = allowedModules.includes('turnos-fijos')
 
   useEffect(() => {
     const token = getCurrentToken()
@@ -240,7 +240,7 @@ export default function DashboardHomePage() {
           <p className="page-subtitle">Resumen de asistencia y asignacion de turnos de tu empresa.</p>
         </div>
 
-        {allowedModules.includes('asignacion-turnos') ? (
+        {allowedModules.includes('turnos-fijos') ? (
           <Link to="/dashboard/asignacion-turnos" className="dashboard-page__cta">
             <Button icon="icon-calendar" className="btn-primary">
               Ver asignacion

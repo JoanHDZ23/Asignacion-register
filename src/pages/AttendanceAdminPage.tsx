@@ -18,26 +18,44 @@ type ActiveModal = 'employee' | 'position' | 'location' | 'location-edit' | 'loc
 
 const accessModuleLabels: Record<AccessModule, string> = {
   dashboard: 'Inicio',
-  'asignacion-turnos': 'Asignacion de turnos',
-  'gestion-asistencia': 'Gestion de asistencia',
-  informes: 'Informes',
+  'turnos-fijos': 'Turnos fijos',
+  'turnos-rotativos': 'Turnos rotativos',
+  'horas-extras-recargos': 'Horas extras y recargos',
+  geolocalizacion: 'Geolocalización',
+  'permisos-ausencias': 'Permisos y ausencias',
+  'biometria-facial': 'Biometría / facial',
+  teletrabajo: 'Teletrabajo',
   facturacion: 'Facturación',
+  informes: 'Informes',
   configuracion: 'Configuración',
-  horarios: 'Horarios',
-  'asistencia-clases': 'Asistencia clases',
-  calificaciones: 'Calificaciones',
+  'asistencia-clase': 'Asistencia por clase',
+  'codigo-qr': 'Código QR',
+  'asistencia-docente': 'Asistencia docente',
+  'porcentaje-asistencia': '% mínimo asistencia',
+  justificaciones: 'Justificaciones',
+  'alertas-inasistencia': 'Alertas inasistencia',
+  'eventos-talleres': 'Eventos y talleres',
 }
 
 const accessModuleDescriptions: Record<AccessModule, string> = {
-  dashboard: 'Permite acceder a la vista principal.',
-  'asignacion-turnos': 'Ver, confirmar y gestionar turnos.',
-  'gestion-asistencia': 'Gestion operativa, entradas y salidas.',
-  informes: 'Consultar y exportar informes de asistencia.',
-  facturacion: 'Generar cuentas de cobro y facturación.',
-  configuracion: 'Administrar cargos, ubicaciones e invitaciones.',
-  horarios: 'Consultar horarios de clases (academia).',
-  'asistencia-clases': 'Registrar asistencia a clases (academia).',
-  calificaciones: 'Gestionar calificaciones (academia).',
+  dashboard: 'Vista principal con resumen.',
+  'turnos-fijos': 'Control de entradas y salidas en horarios rígidos.',
+  'turnos-rotativos': 'Asignación dinámica de turnos por semana/mes.',
+  'horas-extras-recargos': 'Cálculo de recargos nocturnos, dominicales y festivos.',
+  geolocalizacion: 'Validación GPS contra puntos de operación.',
+  'permisos-ausencias': 'Gestión de licencias, vacaciones e incapacidades.',
+  'biometria-facial': 'Registro seguro con WebAuthn o foto facial.',
+  teletrabajo: 'Fichaje virtual desde cualquier ubicación.',
+  facturacion: 'Generación de cuentas de cobro por horas.',
+  informes: 'Consultar y exportar reportes.',
+  configuracion: 'Administrar cargos, ubicaciones y usuarios.',
+  'asistencia-clase': 'Pase de lista por asignatura.',
+  'codigo-qr': 'Código QR dinámico para confirmar presencia.',
+  'asistencia-docente': 'Verificación de horas cátedra.',
+  'porcentaje-asistencia': 'Control de faltas para aprobación.',
+  justificaciones: 'Excusas médicas o institucionales.',
+  'alertas-inasistencia': 'Notificaciones por faltas consecutivas.',
+  'eventos-talleres': 'Control de actividades extracurriculares.',
 }
 
 const positionAccessOptions = Object.entries(accessModuleLabels).map(([value, label]) => ({
@@ -87,7 +105,7 @@ export default function AttendanceAdminPage() {
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
   const [editingPosition, setEditingPosition] = useState<PositionResponse | null>(null)
-  const [positionPermissions, setPositionPermissions] = useState<AccessModule[]>(['dashboard', 'asignacion-turnos'])
+  const [positionPermissions, setPositionPermissions] = useState<AccessModule[]>(['dashboard', 'turnos-fijos'])
   const [editingLocation, setEditingLocation] = useState<LocationResponse | null>(null)
 
   // Multi-employee turn form state
@@ -598,7 +616,7 @@ export default function AttendanceAdminPage() {
             <Icon name="icon-link" size={18} />
             <span>Invitar empleado</span>
           </button>
-          <button className="action-btn" type="button" onClick={() => { setEditingPosition(null); setPositionPermissions(['dashboard', 'asignacion-turnos']); setActiveModal('position') }}>
+          <button className="action-btn" type="button" onClick={() => { setEditingPosition(null); setPositionPermissions(['dashboard', 'turnos-fijos']); setActiveModal('position') }}>
             <Icon name="icon-briefcase" size={18} />
             <span>Registrar cargo</span>
           </button>
@@ -932,7 +950,7 @@ export default function AttendanceAdminPage() {
               <div className="info-card__actions">
                 <Button type="button" variant="ghost" size="sm" onClick={() => {
                   setEditingPosition(pos)
-                  setPositionPermissions(pos.permissions?.length ? pos.permissions : ['dashboard', 'asignacion-turnos'])
+                  setPositionPermissions(pos.permissions?.length ? pos.permissions : ['dashboard', 'turnos-fijos'])
                   setActiveModal('position')
                 }}>
                   <Icon name="icon-edit" size={14} /> Configurar
