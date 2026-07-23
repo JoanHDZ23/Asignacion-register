@@ -410,13 +410,14 @@ export default function TurnAssignmentsPage() {
     [employeeMonthlyHours]
   )
 
-  const handleStatusChange = async (turnId: string, newStatus: 'confirmado' | 'rechazado') => {
+  const handleStatusChange = async (turnId: string, newStatus: 'confirmado' | 'rechazado', rejectionReason?: string) => {
     const token = getCurrentToken()
     if (!token) return
     setStatusLoadingId(turnId)
     try {
       await apiRequest<TurnResponse>(`/turns/${turnId}/status`, {
-        method: 'PATCH', token, body: { estado: newStatus },
+        method: 'PATCH', token,
+        body: { estado: newStatus, ...(rejectionReason ? { rejectionReason } : {}) },
       })
       await loadTurns()
     } catch (err) {
@@ -424,6 +425,16 @@ export default function TurnAssignmentsPage() {
     } finally {
       setStatusLoadingId(null)
     }
+  }
+
+  // Modal de rechazo con motivo
+  const [rejectModal, setRejectModal] = useState<{ open: boolean; turnId: string; reason: string }>({ open: false, turnId: '', reason: '' })
+
+  const openRejectModal = (turnId: string) => setRejectModal({ open: true, turnId, reason: '' })
+  const confirmReject = () => {
+    if (!rejectModal.reason.trim()) return
+    void handleStatusChange(rejectModal.turnId, 'rechazado', rejectModal.reason)
+    setRejectModal({ open: false, turnId: '', reason: '' })
   }
 
   /** Abre el modal de reasignación cargando los empleados disponibles. */
@@ -821,7 +832,7 @@ export default function TurnAssignmentsPage() {
                                 <Icon name="icon-check-circle" size={13} /> Confirmar
                               </Button>
                               <Button type="button" size="sm" variant="ghost" disabled={statusLoadingId === turn.id}
-                                onClick={() => void handleStatusChange(turn.id, 'rechazado')}>
+                                onClick={() => openRejectModal(turn.id)}}>
                                 <Icon name="icon-x-circle" size={13} /> Rechazar
                               </Button>
                             </div>
@@ -935,7 +946,7 @@ export default function TurnAssignmentsPage() {
                             <Button
                               type="button" size="sm" variant="ghost"
                               disabled={statusLoadingId === turn.id}
-                              onClick={() => void handleStatusChange(turn.id, 'rechazado')}
+                              onClick={() => openRejectModal(turn.id)}}
                             >
                               <Icon name="icon-x-circle" size={13} /> Rechazar
                             </Button>
@@ -964,6 +975,32 @@ export default function TurnAssignmentsPage() {
           ) : null}
         </section>
       ) : null}
+
+      {/* Modal de rechazo — solicita motivo */}
+      <Modal
+        open={rejectModal.open}
+        title="Rechazar turno"
+        description="Indica el motivo por el cual rechazas este turno. Este motivo quedará registrado."
+        onClose={() => setRejectModal({ open: false, turnId: '', reason: '' })}
+      >
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          <textarea
+            className="custom-form__control custom-form__control--textarea"
+            placeholder="Escribe el motivo del rechazo..."
+            value={rejectModal.reason}
+            onChange={(e) => setRejectModal((p) => ({ ...p, reason: e.target.value }))}
+            rows={3}
+          />
+          <div className="confirm-actions">
+            <Button type="button" variant="ghost" onClick={() => setRejectModal({ open: false, turnId: '', reason: '' })}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="primary" className="btn-danger" disabled={!rejectModal.reason.trim()} onClick={confirmReject}>
+              Confirmar rechazo
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal de detalles del turno — supervisor confirma llegada de compañeros */}
       <Modal
@@ -1394,7 +1431,7 @@ export default function TurnAssignmentsPage() {
                           <Button
                             type="button" size="sm" variant="ghost"
                             disabled={statusLoadingId === row.id}
-                            onClick={() => void handleStatusChange(row.id, 'rechazado')}
+                            onClick={() => openRejectModal(row.id)}}
                           >
                             <Icon name="icon-x-circle" size={14} /> Rechazar
                           </Button>
