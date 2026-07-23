@@ -794,6 +794,16 @@ export async function createCompany(company: Omit<Company, 'id'>) {
   return companyWithId
 }
 
+export async function updateCompany(company: Company) {
+  try {
+    await postAppsScript('update', 'companias', companyToRemoteRow(company))
+  } catch (error) {
+    console.warn('[database] No fue posible actualizar la compania en Apps Script.', error)
+  }
+  await persistLocalCompany(company)
+  return company
+}
+
 export async function createUser(user: Omit<User, 'id'>) {
   let userWithId: User = {
     id: `user-${Date.now()}`,

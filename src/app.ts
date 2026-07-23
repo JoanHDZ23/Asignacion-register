@@ -8,6 +8,7 @@ import { companiesRouter } from './routes/companies.js'
 import { locationsRouter } from './routes/locations.js'
 import { messagesRouter } from './routes/messages.js'
 import { positionsRouter } from './routes/positions.js'
+import { settingsRouter } from './routes/settings.js'
 import { turnsRouter } from './routes/turns.js'
 import { usersRouter } from './routes/users.js'
 
@@ -28,6 +29,7 @@ app.use('/api/companies', companiesRouter)
 app.use('/api/locations', locationsRouter)
 app.use('/api/messages', messagesRouter)
 app.use('/api/positions', positionsRouter)
+app.use('/api/settings', settingsRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/turns', turnsRouter)
 
