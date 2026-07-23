@@ -832,7 +832,7 @@ export default function TurnAssignmentsPage() {
                                 <Icon name="icon-check-circle" size={13} /> Confirmar
                               </Button>
                               <Button type="button" size="sm" variant="ghost" disabled={statusLoadingId === turn.id}
-                                onClick={() => openRejectModal(turn.id)}}>
+                                onClick={() => openRejectModal(turn.id)}>
                                 <Icon name="icon-x-circle" size={13} /> Rechazar
                               </Button>
                             </div>
@@ -946,7 +946,7 @@ export default function TurnAssignmentsPage() {
                             <Button
                               type="button" size="sm" variant="ghost"
                               disabled={statusLoadingId === turn.id}
-                              onClick={() => openRejectModal(turn.id)}}
+                              onClick={() => openRejectModal(turn.id)}
                             >
                               <Icon name="icon-x-circle" size={13} /> Rechazar
                             </Button>
@@ -1431,7 +1431,7 @@ export default function TurnAssignmentsPage() {
                           <Button
                             type="button" size="sm" variant="ghost"
                             disabled={statusLoadingId === row.id}
-                            onClick={() => openRejectModal(row.id)}}
+                            onClick={() => openRejectModal(row.id)}
                           >
                             <Icon name="icon-x-circle" size={14} /> Rechazar
                           </Button>
