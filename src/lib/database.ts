@@ -1209,3 +1209,16 @@ export async function registerHorasTurno(params: {
 
   return record
 }
+
+
+export async function deleteUser(userId: string, companyId: string) {
+  try {
+    await postAppsScript('delete', 'usuarios', { id_usuario: userId })
+  } catch (error) {
+    console.warn('[database] No fue posible eliminar el usuario en Apps Script.', error)
+  }
+
+  const db = await readLocalDatabase()
+  db.users = db.users.filter((u) => !(u.id === userId && u.companyId === companyId))
+  await writeLocalDatabase(db)
+}

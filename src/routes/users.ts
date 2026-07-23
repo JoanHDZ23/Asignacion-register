@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { createUser, createUserInvitation, readDatabase } from '../lib/database.js'
+import { createUser, createUserInvitation, readDatabase, updateUser, deleteUser } from '../lib/database.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 
 export const usersRouter = Router()
@@ -147,4 +147,97 @@ usersRouter.post('/', async (request, response) => {
   })
 
   response.status(201).json(user)
+})
+
+/**
+ * GET /users/:userId — detalle de un empleado
+ */
+usersRouter.get('/:userId', async (request, response) => {
+  const db = await readDatabase()
+  const companyId =
+    request.authUser!.companyId ||
+    db.users.find((u) => u.id === request.authUser!.userId)?.companyId || ''
+
+  const user = db.users.find(
+    (u) => u.id === request.params.userId && u.companyId === companyId,
+  )
+
+  if (!user) {
+    response.status(404).json({ message: 'Usuario no encontrado.' })
+    return
+  }
+
+  response.json(user)
+})
+
+/**
+ * PATCH /users/:userId — editar datos del empleado
+ */
+usersRouter.patch('/:userId', async (request, response) => {
+  const db = await readDatabase()
+  const companyId =
+    request.authUser!.companyId ||
+    db.users.find((u) => u.id === request.authUser!.userId)?.companyId || ''
+
+  const user = db.users.find(
+    (u) => u.id === request.params.userId && u.companyId === companyId,
+  )
+
+  if (!user) {
+    response.status(404).json({ message: 'Usuario no encontrado.' })
+    return
+  }
+
+  const {
+    nombreCompleto,
+    tipoDocumento,
+    numeroDocumento,
+    correo,
+    telefono,
+    cargo,
+    role,
+    positionId,
+    activa,
+  } = request.body ?? {}
+
+  if (nombreCompleto !== undefined) user.nombreCompleto = String(nombreCompleto)
+  if (tipoDocumento !== undefined)  user.tipoDocumento  = String(tipoDocumento)
+  if (numeroDocumento !== undefined) user.numeroDocumento = String(numeroDocumento)
+  if (correo !== undefined)         user.correo         = String(correo)
+  if (telefono !== undefined)       user.telefono       = telefono ? String(telefono) : undefined
+  if (cargo !== undefined)          user.cargo          = String(cargo)
+  if (role !== undefined)           user.role           = role
+  if (positionId !== undefined)     user.positionId     = positionId || undefined
+  if (activa !== undefined)         user.activa         = Boolean(activa)
+
+  await updateUser(user)
+  response.json(user)
+})
+
+/**
+ * DELETE /users/:userId — eliminar empleado
+ */
+usersRouter.delete('/:userId', async (request, response) => {
+  const db = await readDatabase()
+  const companyId =
+    request.authUser!.companyId ||
+    db.users.find((u) => u.id === request.authUser!.userId)?.companyId || ''
+
+  const user = db.users.find(
+    (u) => u.id === request.params.userId && u.companyId === companyId,
+  )
+
+  if (!user) {
+    response.status(404).json({ message: 'Usuario no encontrado.' })
+    return
+  }
+
+  // No permitir eliminarse a sí mismo
+  if (user.id === request.authUser!.userId) {
+    response.status(403).json({ message: 'No puedes eliminar tu propia cuenta.' })
+    return
+  }
+
+  await deleteUser(user.id, companyId)
+  response.status(204).send()
 })
