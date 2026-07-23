@@ -20,12 +20,24 @@ const accessModuleLabels: Record<AccessModule, string> = {
   dashboard: 'Inicio',
   'asignacion-turnos': 'Asignacion de turnos',
   'gestion-asistencia': 'Gestion de asistencia',
+  informes: 'Informes',
+  facturacion: 'Facturación',
+  configuracion: 'Configuración',
+  horarios: 'Horarios',
+  'asistencia-clases': 'Asistencia clases',
+  calificaciones: 'Calificaciones',
 }
 
 const accessModuleDescriptions: Record<AccessModule, string> = {
   dashboard: 'Permite acceder a la vista principal.',
-  'asignacion-turnos': 'Consultar turnos y horarios.',
-  'gestion-asistencia': 'Gestion operativa y formularios.',
+  'asignacion-turnos': 'Ver, confirmar y gestionar turnos.',
+  'gestion-asistencia': 'Gestion operativa, entradas y salidas.',
+  informes: 'Consultar y exportar informes de asistencia.',
+  facturacion: 'Generar cuentas de cobro y facturación.',
+  configuracion: 'Administrar cargos, ubicaciones e invitaciones.',
+  horarios: 'Consultar horarios de clases (academia).',
+  'asistencia-clases': 'Registrar asistencia a clases (academia).',
+  calificaciones: 'Gestionar calificaciones (academia).',
 }
 
 const positionAccessOptions = Object.entries(accessModuleLabels).map(([value, label]) => ({
@@ -36,6 +48,7 @@ const positionAccessOptions = Object.entries(accessModuleLabels).map(([value, la
 
 const positionFields: CustomFormField[] = [
   { name: 'nombre', label: 'Nombre del cargo', placeholder: 'Ej. Auxiliar de enfermeria', required: true },
+  { name: 'valorHora', label: 'Valor por hora ($)', placeholder: 'Ej. 15000', type: 'text' },
   { name: 'descripcion', label: 'Descripcion', type: 'textarea', placeholder: 'Funciones del cargo', fullWidth: true },
 ]
 
@@ -139,7 +152,9 @@ export default function AttendanceAdminPage() {
   const positionFormFields = useMemo<CustomFormField[]>(() => positionFields.map((f) => ({
     ...f,
     defaultValue: f.name === 'nombre' ? editingPosition?.nombre ?? ''
-      : f.name === 'descripcion' ? editingPosition?.descripcion ?? '' : f.defaultValue,
+      : f.name === 'descripcion' ? editingPosition?.descripcion ?? ''
+      : f.name === 'valorHora' ? editingPosition?.valorHora?.toString() ?? ''
+      : f.defaultValue,
   })), [editingPosition])
 
   // ── Filtros del panel de asistencia ───────────────────────
@@ -295,10 +310,17 @@ export default function AttendanceAdminPage() {
   const handleCreatePosition = async (values: CustomFormValues) => {
     if (!token) return
     try {
+      const valorHora = values.valorHora ? Number(values.valorHora) : undefined
       const created = await apiRequest<PositionResponse>(
         editingPosition ? `/positions/${editingPosition.id}` : '/positions',
         { method: editingPosition ? 'PATCH' : 'POST', token,
-          body: { nombre: values.nombre ?? '', descripcion: values.descripcion ?? '', permissions: positionPermissions } },
+          body: {
+            nombre: values.nombre ?? '',
+            descripcion: values.descripcion ?? '',
+            permissions: positionPermissions,
+            valorHora: valorHora && !Number.isNaN(valorHora) ? valorHora : undefined,
+          },
+        },
       )
       setPositions((cur) => editingPosition ? cur.map((p) => p.id === created.id ? created : p) : [...cur, created])
       setPositionFeedback({ kind: 'success', message: `Cargo "${created.nombre}" ${editingPosition ? 'actualizado' : 'registrado'} correctamente.` })

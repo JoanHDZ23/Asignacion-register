@@ -78,6 +78,7 @@ export type PositionResponse = {
   nombre: string
   descripcion?: string
   permissions: AccessModule[]
+  valorHora?: number
   activa: boolean
   createdAt: string
 }
