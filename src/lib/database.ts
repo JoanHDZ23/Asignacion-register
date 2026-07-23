@@ -30,7 +30,7 @@ const defaultDatabase: DatabaseSchema = {
   facturas: [],
 }
 
-const defaultPositionPermissions: AccessModule[] = ['dashboard', 'asignacion-turnos']
+const defaultPositionPermissions: AccessModule[] = ['dashboard', 'turnos-fijos']
 
 type AppsScriptTable = 'companias' | 'usuarios' | 'cargos' | 'ubicaciones' | 'asignaciones'
 
@@ -342,7 +342,7 @@ function mapCompanyRow(row: Record<string, unknown>): Company {
     }
   } catch { /* usa defaults */ }
 
-  let enabledModules: Company['enabledModules'] = ['dashboard', 'asignacion-turnos', 'gestion-asistencia']
+  let enabledModules: Company['enabledModules'] = ['dashboard', 'turnos-fijos', 'geolocalizacion', 'informes']
   try {
     const rawModules = row.enabled_modules ?? row.enabledModules
     if (typeof rawModules === 'string' && rawModules.trim()) {

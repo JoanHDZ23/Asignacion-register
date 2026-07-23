@@ -47,7 +47,7 @@ positionsRouter.post('/', requireRole(['admin']), async (request, response) => {
     descripcion,
     permissions: Array.isArray(permissions)
       ? permissions.filter((item): item is AccessModule => typeof item === 'string')
-      : ['dashboard', 'asignacion-turnos'],
+      : ['dashboard', 'turnos-fijos'],
     valorHora: typeof valorHora === 'number' ? valorHora : undefined,
     activa: true,
     createdAt: new Date().toISOString(),

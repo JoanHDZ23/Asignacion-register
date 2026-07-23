@@ -1,9 +1,39 @@
 export type UserRole = 'admin' | 'supervisor' | 'operativo' | 'docente' | 'estudiante'
 export type TurnStatus = 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado'
 export type InvitationStatus = 'pendiente' | 'completada' | 'cancelada'
-export type AccessModule = 'dashboard' | 'asignacion-turnos' | 'gestion-asistencia' | 'horarios' | 'asistencia-clases' | 'calificaciones' | 'informes' | 'facturacion' | 'configuracion'
 export type AttendanceAction = 'entrada' | 'salida'
 export type CompanyType = 'empresa' | 'academia'
+
+// ── Módulos por tipo de gestión ──────────────────────────────────────────────
+
+// Módulos disponibles para tipo EMPRESA
+export type EmpresaModule =
+  | 'dashboard'
+  | 'turnos-fijos'              // Turnos con horario rígido
+  | 'turnos-rotativos'         // Asignación dinámica mañana/tarde/noche
+  | 'horas-extras-recargos'    // Dominicales, festivos, nocturno
+  | 'geolocalizacion'          // Geofencing por punto operativo
+  | 'permisos-ausencias'       // Licencias, vacaciones, incapacidades
+  | 'biometria-facial'         // WebAuthn / foto facial
+  | 'teletrabajo'              // Fichaje remoto
+  | 'facturacion'              // Cuenta de cobro y liquidación
+  | 'informes'                 // Reportes y exportación
+  | 'configuracion'            // Gestión de cargos, ubicaciones
+
+// Módulos disponibles para tipo ACADEMIA
+export type AcademiaModule =
+  | 'dashboard'
+  | 'asistencia-clase'         // Pase de lista por asignatura
+  | 'codigo-qr'               // QR dinámico para confirmar presencia
+  | 'asistencia-docente'       // Horas cátedra cumplidas
+  | 'porcentaje-asistencia'    // Control de faltas / pérdida de materia
+  | 'justificaciones'          // Excusas médicas o institucionales
+  | 'alertas-inasistencia'     // Notificaciones por faltas consecutivas
+  | 'eventos-talleres'         // Actividades extracurriculares
+  | 'informes'                 // Reportes y exportación
+  | 'configuracion'            // Gestión de materias, horarios
+
+export type AccessModule = EmpresaModule | AcademiaModule
 
 export type StoredWebAuthnCredential = {
   id: string
@@ -49,13 +79,29 @@ export type TurnAttendance = {
 }
 
 export type CompanySettings = {
+  // ── Comunes ──────────────────────────────────────────────
   requireBiometric: boolean
   requirePhoto: boolean
   requireLocationValidation: boolean
   allowAutoCloseMinutes: number
   defaultConfirmHoursLimit: number
-  billingRateDefault?: number
   timezone: string
+
+  // ── Empresa ──────────────────────────────────────────────
+  billingRateDefault?: number          // Tarifa hora por defecto
+  recargoNocturno?: number             // % recargo nocturno (default 35)
+  recargoDominical?: number            // % recargo dominical (default 75)
+  recargoFestivo?: number              // % recargo festivo (default 100)
+  jornadaOrdinaria?: number            // Horas jornada ordinaria (default 8)
+  permitirTeletrabajo?: boolean        // Habilita fichaje remoto
+  permitirPermutaTurnos?: boolean      // Permite cambio de turnos entre empleados
+
+  // ── Academia ─────────────────────────────────────────────
+  maxInasistenciaPorcentaje?: number   // % máximo de faltas antes de perder materia (default 20)
+  duracionBloque?: number              // Minutos por bloque académico (default 45)
+  alertaFaltasConsecutivas?: number    // Nº de faltas para activar alerta (default 3)
+  requiereExcusaFormal?: boolean       // Exige documento de excusa para justificar
+  habilitarQrDinamico?: boolean        // QR cambiante por clase
 }
 
 export type Company = {

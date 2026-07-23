@@ -1,9 +1,15 @@
 import type { AccessModule, CompanySettings, CompanyType, DatabaseSchema, User } from '../types.js'
 
+// ── Módulos por defecto según tipo de gestión ──────────────────────────
+
 export const empresaModules: AccessModule[] = [
   'dashboard',
-  'asignacion-turnos',
-  'gestion-asistencia',
+  'turnos-fijos',
+  'turnos-rotativos',
+  'horas-extras-recargos',
+  'geolocalizacion',
+  'permisos-ausencias',
+  'biometria-facial',
   'facturacion',
   'informes',
   'configuracion',
@@ -11,9 +17,13 @@ export const empresaModules: AccessModule[] = [
 
 export const academiaModules: AccessModule[] = [
   'dashboard',
-  'horarios',
-  'asistencia-clases',
-  'calificaciones',
+  'asistencia-clase',
+  'codigo-qr',
+  'asistencia-docente',
+  'porcentaje-asistencia',
+  'justificaciones',
+  'alertas-inasistencia',
+  'eventos-talleres',
   'informes',
   'configuracion',
 ]
@@ -23,35 +33,60 @@ export function getDefaultModulesByType(tipo: CompanyType): AccessModule[] {
 }
 
 export function getDefaultSettings(tipo: CompanyType): CompanySettings {
-  return {
-    requireBiometric: tipo === 'empresa',
+  const base = {
+    requireBiometric: true,
     requirePhoto: true,
     requireLocationValidation: true,
     allowAutoCloseMinutes: 30,
     defaultConfirmHoursLimit: 4,
     timezone: 'America/Bogota',
   }
+
+  if (tipo === 'academia') {
+    return {
+      ...base,
+      requireBiometric: false,
+      requireLocationValidation: false,
+      maxInasistenciaPorcentaje: 20,
+      duracionBloque: 45,
+      alertaFaltasConsecutivas: 3,
+      requiereExcusaFormal: true,
+      habilitarQrDinamico: true,
+    }
+  }
+
+  // Empresa
+  return {
+    ...base,
+    billingRateDefault: undefined,
+    recargoNocturno: 35,
+    recargoDominical: 75,
+    recargoFestivo: 100,
+    jornadaOrdinaria: 8,
+    permitirTeletrabajo: false,
+    permitirPermutaTurnos: false,
+  }
 }
 
 export function resolveCompanyIdForUser(db: DatabaseSchema, user: User | undefined) {
-  if (!user) {
-    return ''
-  }
-
+  if (!user) return ''
   return user.companyId || db.users.find((item) => item.id === user.id)?.companyId || ''
 }
 
-export function resolveAllowedModules(db: DatabaseSchema, user: User) {
+export function resolveAllowedModules(db: DatabaseSchema, user: User): AccessModule[] {
+  const company = db.companies.find((c) => c.id === user.companyId)
+  const companyModules = company?.enabledModules ?? empresaModules
+
   if (user.role === 'admin') {
-    // Admin ve los módulos habilitados de su empresa
-    const company = db.companies.find((c) => c.id === user.companyId)
-    return company?.enabledModules?.length ? company.enabledModules : empresaModules
+    return companyModules
   }
 
-  if (user.role === 'supervisor') {
-    return ['dashboard', 'asignacion-turnos', 'gestion-asistencia'] satisfies AccessModule[]
+  if (user.role === 'supervisor' || user.role === 'docente') {
+    // Supervisores y docentes ven módulos operativos sin configuración
+    return companyModules.filter((m) => m !== 'configuracion')
   }
 
+  // Operativo / estudiante — permisos definidos por su cargo
   const position = user.positionId
     ? db.positions.find((item) => item.id === user.positionId && item.companyId === user.companyId)
     : undefined
@@ -60,5 +95,6 @@ export function resolveAllowedModules(db: DatabaseSchema, user: User) {
     return position.permissions
   }
 
-  return ['dashboard', 'asignacion-turnos'] satisfies AccessModule[]
+  // Defaults mínimos
+  return ['dashboard'] satisfies AccessModule[]
 }
