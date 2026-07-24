@@ -260,7 +260,7 @@ export default function DashboardHomePage() {
         ) : null}
       </section>
 
-      {/* Stats — solo las métricas permitidas según módulos */}
+      {/* Stats — consolidado según el rol del usuario */}
       {dashboardMetrics.length > 0 ? (
         <section className="stats-grid">
           {dashboardMetrics.map((metric) => (
@@ -307,6 +307,29 @@ export default function DashboardHomePage() {
               <span className="personal-info-label">Turnos programados</span>
               <strong>{turns.length}</strong>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Turnos rechazados con anotaciones */}
+      {turns.filter((t) => t.estado === 'rechazado' && t.rejectionReason).length > 0 && (
+        <section className="content-card">
+          <h3>Turnos rechazados</h3>
+          <p style={{ fontSize: 13, color: 'var(--clr-text-2)', marginBottom: '.75rem' }}>Anotaciones de rechazo por parte del supervisor.</p>
+          <div className="rejected-turns-list">
+            {turns.filter((t) => t.estado === 'rechazado' && t.rejectionReason).slice(0, 10).map((t) => (
+              <article key={t.id} className="rejected-turn-item">
+                <div className="rejected-turn-item__header">
+                  <strong>{t.assignedToUserName ?? 'Empleado'}</strong>
+                  <span>{t.fecha} · {t.hora}{t.horaFin ? ` – ${t.horaFin}` : ''}</span>
+                  <span className="rejected-turn-item__location"><Icon name="icon-map-pin" size={12} /> {t.locationNombre ?? 'Sin ubicación'}</span>
+                </div>
+                <div className="rejected-turn-item__reason">
+                  <Icon name="icon-x-circle" size={13} />
+                  <span>{t.rejectionReason}</span>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       )}

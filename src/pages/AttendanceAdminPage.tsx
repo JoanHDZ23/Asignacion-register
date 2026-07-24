@@ -148,6 +148,8 @@ const invitationBaseFields: CustomFormField[] = [
 export default function AttendanceAdminPage() {
   const token = getCurrentToken()
   const currentUser = getCurrentUser()
+  const isSupervisor = currentUser?.role === 'supervisor'
+    || (currentUser?.role !== 'admin' && Boolean(currentUser?.cargo?.toLowerCase().includes('supervisor')))
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('q')?.toLowerCase() ?? ''
 
@@ -852,8 +854,8 @@ export default function AttendanceAdminPage() {
         ))}
       </div>
 
-      {/* Quick actions — solo admin puede crear/registrar */}
-      {currentUser?.role === 'admin' && (
+      {/* Quick actions — admin: all actions, supervisor: only invite */}
+      {(currentUser?.role === 'admin' || isSupervisor) && (
       <div className="pg__section">
         <div className="section-header">
           <h2>Acciones rapidas</h2>
@@ -863,18 +865,22 @@ export default function AttendanceAdminPage() {
             <Icon name="icon-link" size={18} />
             <span>Invitar empleado</span>
           </button>
-          <button className="action-btn" type="button" onClick={() => { setEditingPosition(null); setPositionPermissions(['dashboard', 'turnos-fijos']); setActiveModal('position') }}>
-            <Icon name="icon-briefcase" size={18} />
-            <span>Registrar cargo</span>
-          </button>
-          <button className="action-btn" type="button" onClick={() => setActiveModal('location')}>
-            <Icon name="icon-map-pin" size={18} />
-            <span>Registrar ubicacion</span>
-          </button>
-          <button className="action-btn action-btn--accent" type="button" onClick={() => setActiveModal('turn')}>
-            <Icon name="icon-calendar" size={18} />
-            <span>Crear turno</span>
-          </button>
+          {currentUser?.role === 'admin' && (
+            <>
+              <button className="action-btn" type="button" onClick={() => { setEditingPosition(null); setPositionPermissions(['dashboard', 'turnos-fijos']); setActiveModal('position') }}>
+                <Icon name="icon-briefcase" size={18} />
+                <span>Registrar cargo</span>
+              </button>
+              <button className="action-btn" type="button" onClick={() => setActiveModal('location')}>
+                <Icon name="icon-map-pin" size={18} />
+                <span>Registrar ubicacion</span>
+              </button>
+              <button className="action-btn action-btn--accent" type="button" onClick={() => setActiveModal('turn')}>
+                <Icon name="icon-calendar" size={18} />
+                <span>Crear turno</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
       )}
