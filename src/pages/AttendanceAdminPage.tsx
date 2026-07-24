@@ -175,6 +175,7 @@ export default function AttendanceAdminPage() {
   const [hoursRange, setHoursRange] = useState<'15' | '30'>('15')
   const [billingFilterWorker, setBillingFilterWorker] = useState('')
   const [billingPeriod, setBillingPeriod] = useState<'' | '1' | '2'>('')
+  const [detailWorkerId, setDetailWorkerId] = useState<string | null>(null)
 
   // Multi-employee turn form state
   const [turnForm, setTurnForm] = useState({
@@ -1268,16 +1269,21 @@ export default function AttendanceAdminPage() {
               <p className="info-card__detail"><Icon name="icon-briefcase" size={13} />{w.cargo}</p>
               <p className="info-card__detail"><Icon name="icon-user" size={13} />{w.correo}</p>
               <p className="info-card__detail"><Icon name="icon-building" size={13} />{companyName}</p>
-              {currentUser?.role === 'admin' && (
-                <div className="info-card__actions">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => { setEditingWorker(w); setActiveModal('worker-edit') }}>
-                    <Icon name="icon-clipboard" size={13} /> Editar
-                  </Button>
-                  <Button type="button" size="sm" variant="ghost" className="btn-danger-text" onClick={() => { setDeletingWorker(w); setActiveModal('worker-delete') }}>
-                    <Icon name="icon-x-circle" size={13} /> Eliminar
-                  </Button>
-                </div>
-              )}
+              <div className="info-card__actions">
+                <Button type="button" size="sm" variant="ghost" onClick={() => setDetailWorkerId(w.id)}>
+                  <Icon name="icon-eye" size={13} /> Ver detalles
+                </Button>
+                {currentUser?.role === 'admin' && (
+                  <>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => { setEditingWorker(w); setActiveModal('worker-edit') }}>
+                      <Icon name="icon-clipboard" size={13} /> Editar
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" className="btn-danger-text" onClick={() => { setDeletingWorker(w); setActiveModal('worker-delete') }}>
+                      <Icon name="icon-x-circle" size={13} /> Eliminar
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           )) : (
             <div className="info-card info-card--empty">
@@ -1641,6 +1647,89 @@ export default function AttendanceAdminPage() {
             <Icon name="icon-x-circle" size={16} /> Eliminar turno
           </Button>
         </div>
+      </Modal>
+
+      {/* Modal: Detalle del empleado — turnos con fotos */}
+      <Modal
+        open={!!detailWorkerId}
+        title={`Detalle: ${workers.find((w) => w.id === detailWorkerId)?.nombreCompleto ?? ''}`}
+        description="Historial de turnos y fotos de ingreso."
+        onClose={() => setDetailWorkerId(null)}
+      >
+        {detailWorkerId && (() => {
+          const worker = workers.find((w) => w.id === detailWorkerId)
+          const workerTurns = turns
+            .filter((t) => t.assignedToUserId === detailWorkerId)
+            .sort((a, b) => b.fecha.localeCompare(a.fecha))
+            .slice(0, 20)
+
+          return (
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {/* Info personal */}
+              <div className="personal-info-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div className="personal-info-item">
+                  <span className="personal-info-label">Documento</span>
+                  <strong>{worker?.numeroDocumento ?? '—'}</strong>
+                </div>
+                <div className="personal-info-item">
+                  <span className="personal-info-label">Cargo</span>
+                  <strong>{worker?.cargo ?? '—'}</strong>
+                </div>
+                <div className="personal-info-item">
+                  <span className="personal-info-label">Correo</span>
+                  <strong>{worker?.correo ?? '—'}</strong>
+                </div>
+                <div className="personal-info-item">
+                  <span className="personal-info-label">Teléfono</span>
+                  <strong>{worker?.telefono ?? '—'}</strong>
+                </div>
+                <div className="personal-info-item">
+                  <span className="personal-info-label">Rol</span>
+                  <strong className="personal-info-role">{worker?.role}</strong>
+                </div>
+                <div className="personal-info-item">
+                  <span className="personal-info-label">Turnos registrados</span>
+                  <strong>{workerTurns.length}</strong>
+                </div>
+              </div>
+
+              {/* Turnos con fotos */}
+              <h4 style={{ margin: 0 }}>Últimos turnos</h4>
+              {workerTurns.length ? (
+                <div style={{ display: 'grid', gap: '.6rem', maxHeight: 400, overflow: 'auto' }}>
+                  {workerTurns.map((t) => (
+                    <div key={t.id} className="worker-detail-turn">
+                      <div className="worker-detail-turn__info">
+                        <strong>{t.fecha}</strong>
+                        <span>{t.hora}{t.horaFin ? ` – ${t.horaFin}` : ''} · {t.locationNombre ?? 'Sin ubicación'}</span>
+                        <span className={`status-badge status-badge--${t.estado}`}>{t.estado.replace('_', ' ')}</span>
+                      </div>
+                      <div className="worker-detail-turn__photos">
+                        {t.attendance?.checkIn?.facialPhotoUrl && (
+                          <a href={t.attendance.checkIn.facialPhotoUrl} target="_blank" rel="noopener noreferrer" className="worker-detail-photo">
+                            <img src={t.attendance.checkIn.facialPhotoUrl} alt="Foto entrada" />
+                            <span>Entrada · {new Date(t.attendance.checkIn.markedAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </a>
+                        )}
+                        {t.attendance?.checkOut?.facialPhotoUrl && (
+                          <a href={t.attendance.checkOut.facialPhotoUrl} target="_blank" rel="noopener noreferrer" className="worker-detail-photo">
+                            <img src={t.attendance.checkOut.facialPhotoUrl} alt="Foto salida" />
+                            <span>Salida · {new Date(t.attendance.checkOut.markedAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </a>
+                        )}
+                        {!t.attendance?.checkIn?.facialPhotoUrl && !t.attendance?.checkOut?.facialPhotoUrl && (
+                          <span style={{ fontSize: 12, color: 'var(--clr-text-2)' }}>Sin fotos registradas</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ textAlign: 'center', color: 'var(--clr-text-2)' }}>Sin turnos registrados.</p>
+              )}
+            </div>
+          )
+        })()}
       </Modal>
 
       {/* Modal: Historial de horas */}
