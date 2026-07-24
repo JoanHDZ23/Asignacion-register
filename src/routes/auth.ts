@@ -178,6 +178,12 @@ authRouter.get('/member-invitations/:token', async (request, response) => {
     return
   }
 
+  // Verifica expiración (1 hora)
+  if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
+    response.status(410).json({ message: 'El enlace de registro ha expirado. Solicita uno nuevo al administrador.' })
+    return
+  }
+
   const db = await readDatabase()
   const company = db.companies.find((item) => item.id === invitation.companyId)
   const position = db.positions.find((item) => item.id === invitation.positionId)
@@ -199,6 +205,7 @@ authRouter.get('/member-invitations/:token', async (request, response) => {
     cargo: invitation.cargo,
     role: invitation.role,
     status: invitation.status,
+    expiresAt: invitation.expiresAt,
   })
 })
 
@@ -207,6 +214,12 @@ authRouter.post('/member-invitations/:token/complete', async (request, response)
 
   if (!invitation || invitation.status !== 'pendiente') {
     response.status(404).json({ message: 'El enlace de registro no es valido o ya fue utilizado.' })
+    return
+  }
+
+  // Verifica expiración
+  if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
+    response.status(410).json({ message: 'El enlace de registro ha expirado. Solicita uno nuevo al administrador.' })
     return
   }
 

@@ -232,14 +232,17 @@ export async function deleteTurn(turnId: string) {
 // ── UserInvitation ───────────────────────────────────────────────────────────
 
 export async function createUserInvitation(
-  invitation: Omit<UserInvitation, 'id' | 'token' | 'status' | 'createdAt'>,
+  invitation: Omit<UserInvitation, 'id' | 'token' | 'status' | 'createdAt' | 'expiresAt'>,
 ) {
   const col = await getUserInvitationsCollection()
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString() // 1 hora
   const doc: UserInvitation = {
     id: `invite-${Date.now()}`,
     token: nanoid(24),
     status: 'pendiente',
-    createdAt: new Date().toISOString(),
+    expiresAt,
+    createdAt: now.toISOString(),
     ...invitation,
   }
   await col.insertOne({ ...doc } as any)

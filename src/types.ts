@@ -240,6 +240,7 @@ export type UserInvitation = {
   status: InvitationStatus
   invitedByUserId: string
   invitedUserId?: string
+  expiresAt: string                   // ISO date — link expira después de 1 hora
   createdAt: string
   completedAt?: string
 }
