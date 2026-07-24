@@ -5,9 +5,23 @@ import { apiRequest } from '../lib/api'
 
 const registerFields: CustomFormField[] = [
   {
+    name: 'tipo',
+    label: 'Tipo de gestión',
+    type: 'select',
+    placeholder: 'Selecciona el tipo de organización',
+    required: true,
+    fullWidth: true,
+    defaultValue: 'empresa',
+    options: [
+      { label: 'Empresa — Control de turnos, asistencia laboral y facturación', value: 'empresa' },
+      { label: 'Academia — Asistencia por clase, docentes y estudiantes', value: 'academia' },
+    ],
+    helperText: 'Esto define los módulos y roles disponibles en la plataforma.',
+  },
+  {
     name: 'empresa',
-    label: 'Empresa',
-    placeholder: 'Nombre de la empresa',
+    label: 'Nombre de la organización',
+    placeholder: 'Nombre de la empresa o institución',
     required: true,
     fullWidth: true,
   },
@@ -132,10 +146,10 @@ export default function RegisterPage() {
   return (
     <div className="auth-page">
       <CustomForm
-        title="Registrar empresa"
-        description="Crea la empresa y su usuario administrador principal en el backend."
+        title="Registrar organización"
+        description="Crea tu empresa o institución académica y su usuario administrador."
         fields={registerFields}
-        submitLabel="Crear empresa"
+        submitLabel="Crear organización"
         onSubmit={handleSubmit}
       />
 
