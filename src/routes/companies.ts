@@ -39,7 +39,7 @@ companiesRouter.get('/summary', requireRole(['admin']), async (request, response
   response.json(summary)
 })
 
-companiesRouter.get('/management', requireRole(['admin', 'supervisor']), async (request, response) => {
+companiesRouter.get('/management', requireRole(['admin', 'supervisor', 'docente']), async (request, response) => {
   const db = await readDatabase()
   const currentUser = db.users.find((item) => item.id === request.authUser!.userId)
   const companyId = resolveCompanyIdForUser(db, currentUser)
