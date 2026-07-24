@@ -20,7 +20,25 @@ app.use(cors())
 app.use(express.json({ limit: '10mb' }))
 
 app.get('/health', (_request, response) => {
-  response.json({ status: 'ok' })
+  response.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+app.get('/health/db', async (_request, response) => {
+  try {
+    const { connectMongo } = await import('./lib/mongodb.js')
+    const db = await connectMongo()
+    await db.command({ ping: 1 })
+    response.json({ status: 'connected', db: process.env.MONGODB_DB_NAME ?? 'ommex_register' })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    response.status(503).json({ 
+      status: 'disconnected', 
+      error: message,
+      hint: message.includes('SSL') || message.includes('tlsv1')
+        ? 'MongoDB Atlas rechaza la conexión. Agrega 0.0.0.0/0 en Network Access de Atlas.'
+        : 'Verifica MONGODB_URI y la configuración de red.'
+    })
+  }
 })
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument))

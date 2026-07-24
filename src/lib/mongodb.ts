@@ -12,7 +12,7 @@ import type {
 } from '../types.js'
 
 const MONGODB_URI = process.env.MONGODB_URI ??
-  'mongodb+srv://tianhernandez2310_db_user:mEWzcJAm5kxWTsYL@cluster0.s52qrn3.mongodb.net/?appName=Cluster0'
+  'mongodb+srv://tianhernandez2310_db_user:mEWzcJAm5kxWTsYL@cluster0.s52qrn3.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
 
 const DB_NAME = process.env.MONGODB_DB_NAME ?? 'ommex_register'
 
