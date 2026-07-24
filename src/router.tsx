@@ -7,6 +7,7 @@ import DashboardHomePage from './pages/DashboardHomePage'
 import LoginPage from './pages/LoginPage'
 import MemberInvitationPage from './pages/MemberInvitationPage'
 import RegisterPage from './pages/RegisterPage'
+import RootPanelPage from './pages/RootPanelPage'
 import TurnAssignmentsPage from './pages/TurnAssignmentsPage'
 
 export const router = createBrowserRouter([
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
         element: <MemberInvitationPage />,
       },
     ],
+  },
+  {
+    path: '/root-panel',
+    element: <RootPanelPage />,
   },
   {
     path: '/dashboard',
