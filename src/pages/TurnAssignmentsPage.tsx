@@ -902,79 +902,105 @@ export default function TurnAssignmentsPage() {
         </section>
       ) : null}
 
-      {/* Panel supervisor — confirmación de llegada: solo su operación */}
+      {/* Panel supervisor — turnos agrupados por ubicación con confirmación */}
       {isSupervisor ? (
         <section className="content-panel supervisor-panel">
           <header className="content-panel__header">
             <div>
-              <h2>Confirmacion de llegada</h2>
+              <h2>Turnos programados</h2>
               <p style={{ fontSize: 13, color: 'var(--clr-text-2)', margin: '2px 0 0' }}>
-                Empleados de tu punto operativo · {operationTurns.length} turno{operationTurns.length !== 1 ? 's' : ''}
+                Confirma la llegada de los empleados a su punto operativo · {operationTurns.length} turno{operationTurns.length !== 1 ? 's' : ''}
               </p>
             </div>
             <span className="supervisor-badge">
               <Icon name="icon-shield" size={13} /> Supervisor
             </span>
           </header>
-          <div className="biometric-turn-list">
-            {operationTurns.filter((t) => t.estado === 'en_proceso' || t.estado === 'pendiente' || t.estado === 'asignado' || t.estado === 'confirmado').length
-              ? operationTurns
-                  .filter((t) => t.estado !== 'rechazado')
-                  .map((turn) => (
-                    <article className={`biometric-turn-item${needsSupervisorConfirm(turn) ? ' biometric-turn-item--needs-confirm' : ''}`} key={turn.id}>
-                      <div className="biometric-turn-item__meta">
-                        <strong>{turn.asignadoA}</strong>
-                        <span>
-                          {turn.titulo} · {new Intl.DateTimeFormat('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })
-                            .format(new Date(turn.fecha + 'T12:00:00'))} · {turn.horario}
-                        </span>
-                        <span>
-                          {turn.locationUrl
-                            ? <a href={turn.locationUrl} target="_blank" rel="noopener noreferrer" className="location-link"><Icon name="icon-map-pin" size={12} />{turn.ubicacion}</a>
-                            : turn.ubicacion}
-                        </span>
-                        {needsSupervisorConfirm(turn) && (
-                          <span className="needs-confirm-badge">
-                            <Icon name="icon-alert-triangle" size={12} /> Ya ingresó · Confirma su llegada para que las horas cuenten
-                          </span>
-                        )}
+
+          {(() => {
+            // Agrupa por ubicación
+            const locMap = new Map<string, { ubicacion: string; turnos: typeof operationTurns }>()
+            for (const t of operationTurns.filter((t) => t.estado !== 'rechazado')) {
+              const key = t.ubicacion || 'Sin ubicación'
+              if (!locMap.has(key)) locMap.set(key, { ubicacion: key, turnos: [] })
+              locMap.get(key)!.turnos.push(t)
+            }
+            const locationGroups = [...locMap.values()]
+
+            return locationGroups.length ? (
+              <div className="grouped-turns-list">
+                {locationGroups.map((locGroup) => (
+                  <div key={locGroup.ubicacion} className="location-group">
+                    <div className="location-group__header">
+                      <div className="location-group__title">
+                        <Icon name="icon-map-pin" size={16} />
+                        <strong>{locGroup.ubicacion}</strong>
+                        <span className="detail-chip"><strong>{locGroup.turnos.length}</strong> turnos</span>
                       </div>
-                      <div className="biometric-turn-item__actions">
-                        <span className={`turn-status turn-status--${turn.estado}`}>{turn.estado.replace('_', ' ')}</span>
-                        {turn.estado !== 'confirmado' && turn.estado !== 'finalizado' ? (
-                          <div className="biometric-turn-item__confirm">
-                            <Button
-                              type="button" size="sm" variant="ghost"
-                              disabled={statusLoadingId === turn.id}
-                              onClick={() => void handleStatusChange(turn.id, 'confirmado')}
-                            >
-                              <Icon name="icon-check-circle" size={13} /> Confirmar llegada
-                            </Button>
-                            <Button
-                              type="button" size="sm" variant="ghost"
-                              disabled={statusLoadingId === turn.id}
-                              onClick={() => openRejectModal(turn.id)}
-                            >
-                              <Icon name="icon-x-circle" size={13} /> Rechazar
-                            </Button>
+                      {locGroup.turnos[0]?.locationUrl && (
+                        <a href={locGroup.turnos[0].locationUrl} target="_blank" rel="noopener noreferrer" className="location-link">
+                          <Icon name="icon-map-pin" size={13} /> Mapa
+                        </a>
+                      )}
+                    </div>
+                    <div className="location-group__turnos">
+                      {locGroup.turnos.map((turn) => (
+                        <article key={turn.id} className={`grouped-turn-card${needsSupervisorConfirm(turn) ? ' grouped-turn-card--expanded' : ''}`}>
+                          <div className="grouped-turn-card__header" style={{ cursor: 'default' }}>
+                            <div className="grouped-turn-card__info">
+                              <strong>{turn.asignadoA}</strong>
+                              <span>
+                                {new Intl.DateTimeFormat('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })
+                                  .format(new Date(turn.fecha + 'T12:00:00'))} · {turn.horario}
+                              </span>
+                            </div>
+                            <div className="grouped-turn-card__stats">
+                              <span className={`turn-status turn-status--${turn.estado}`}>{turn.estado.replace('_', ' ')}</span>
+                            </div>
+                            <div className="grouped-turn-card__actions-header">
+                              {needsSupervisorConfirm(turn) ? (
+                                <div className="biometric-turn-item__confirm">
+                                  <Button type="button" size="sm" variant="ghost"
+                                    disabled={statusLoadingId === turn.id}
+                                    onClick={() => void handleStatusChange(turn.id, 'confirmado')}>
+                                    <Icon name="icon-check-circle" size={13} /> Confirmar
+                                  </Button>
+                                  <Button type="button" size="sm" variant="ghost"
+                                    disabled={statusLoadingId === turn.id}
+                                    onClick={() => openRejectModal(turn.id)}>
+                                    <Icon name="icon-x-circle" size={13} /> Rechazar
+                                  </Button>
+                                </div>
+                              ) : turn.estado === 'confirmado' ? (
+                                <span className="biometric-turn-item__done">✓ Confirmado</span>
+                              ) : turn.estado === 'finalizado' ? (
+                                <span className="biometric-turn-item__done">Completado</span>
+                              ) : (
+                                <span style={{ fontSize: 12, color: 'var(--clr-text-2)' }}>Esperando ingreso</span>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <span className="biometric-turn-item__done">
-                            {turn.estado === 'confirmado' ? '✓ Confirmado' : 'Completado'}
-                          </span>
-                        )}
-                      </div>
-                    </article>
-                  ))
-              : (
-                <article className="activity-item activity-item--empty">
-                  <div className="activity-item__body">
-                    <strong>Sin turnos activos</strong>
-                    <span>No hay empleados con turnos en curso para confirmar.</span>
+                          {needsSupervisorConfirm(turn) && (
+                            <div className="needs-confirm-badge" style={{ padding: '0.5rem 1rem', borderTop: '1px solid var(--clr-border)' }}>
+                              <Icon name="icon-alert-triangle" size={12} /> El empleado ya marcó entrada · Confirma su llegada para que las horas cuenten
+                            </div>
+                          )}
+                        </article>
+                      ))}
+                    </div>
                   </div>
-                </article>
-              )}
-          </div>
+                ))}
+              </div>
+            ) : (
+              <article className="activity-item activity-item--empty">
+                <div className="activity-item__body">
+                  <strong>Sin turnos activos</strong>
+                  <span>No hay empleados con turnos en curso para confirmar.</span>
+                </div>
+              </article>
+            )
+          })()}
+
           {biometricFeedback.message ? (
             <p className={biometricFeedback.kind === 'error' ? 'turn-table__error' : 'turn-table__success'} style={{ marginTop: '0.75rem' }}>
               {biometricFeedback.message}
