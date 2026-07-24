@@ -32,6 +32,17 @@ export function requireAuth(request: Request, response: Response, next: NextFunc
 }
 
 /**
+ * Middleware que verifica que el usuario autenticado sea root.
+ */
+export function requireRoot(request: Request, response: Response, next: NextFunction) {
+  if (!request.authUser || request.authUser.role !== 'root') {
+    response.status(403).json({ message: 'Acceso denegado. Se requiere rol root.' })
+    return
+  }
+  next()
+}
+
+/**
  * Middleware de roles.
  * Si los roles permitidos incluyen 'supervisor', también verifica si el
  * cargo del usuario en la DB contiene "supervisor" (caso: role=operativo pero cargo=Supervisor de X).
@@ -44,7 +55,7 @@ export function requireRole(roles: UserRole[]) {
     }
 
     // Si el role del JWT coincide directamente → OK
-    if (roles.includes(request.authUser.role)) {
+    if (roles.includes(request.authUser.role as UserRole)) {
       next()
       return
     }

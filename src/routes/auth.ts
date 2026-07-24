@@ -76,6 +76,7 @@ authRouter.post('/register-company', async (request, response) => {
       tipo: companyType,
       enabledModules: getDefaultModulesByType(companyType),
       settings: getDefaultSettings(companyType),
+      activa: true,
       createdAt: new Date().toISOString(),
     })
 

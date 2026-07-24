@@ -153,6 +153,7 @@ export type Company = {
   tipo: CompanyType
   enabledModules: AccessModule[]
   settings: CompanySettings
+  activa: boolean
   createdAt: string
 }
 
@@ -338,5 +339,5 @@ export type Factura = {
 export type AuthUser = {
   userId: string
   companyId: string
-  role: UserRole
+  role: UserRole | 'root'
 }
