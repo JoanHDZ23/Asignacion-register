@@ -134,17 +134,30 @@ export default function AttendanceAdminPage() {
   const loadAdminData = async () => {
     if (!token) return
     try {
-      const response = await apiRequest<CompanyManagementResponse>('/companies/management', { token })
-      setPositions(response.positions)
-      setWorkers(response.users.filter((u) => u.role === 'operativo' || u.role === 'supervisor'))
-      setLocations(response.locations)
-      setInvitations(response.invitations)
-      setTurns(response.turns)
-      if (response.company?.nombre) setCompanyName(response.company.nombre)
-      if (response.currentUser && currentUser) {
-        setCurrentUser({ ...currentUser, companyId: response.currentUser.companyId,
-          role: response.currentUser.role, positionId: response.currentUser.positionId,
-          allowedModules: response.currentUser.allowedModules })
+      // Admin y supervisor usan /management. Otros roles usan /turns
+      const isManagement = currentUser?.role === 'admin' || currentUser?.cargo?.toLowerCase().includes('supervisor')
+
+      if (isManagement) {
+        const response = await apiRequest<CompanyManagementResponse>('/companies/management', { token })
+        setPositions(response.positions)
+        setWorkers(response.users.filter((u) => u.role !== 'admin'))
+        setLocations(response.locations)
+        setInvitations(response.invitations)
+        setTurns(response.turns)
+        if (response.company?.nombre) setCompanyName(response.company.nombre)
+        if (response.currentUser && currentUser) {
+          setCurrentUser({ ...currentUser, companyId: response.currentUser.companyId,
+            role: response.currentUser.role, positionId: response.currentUser.positionId,
+            allowedModules: response.currentUser.allowedModules })
+        }
+      } else {
+        // Docente/operativo — carga solo turnos y ubicaciones
+        const [turnsRes, locsRes] = await Promise.all([
+          apiRequest<TurnResponse[]>('/turns', { token }),
+          apiRequest<LocationResponse[]>('/locations', { token }).catch(() => [] as LocationResponse[]),
+        ])
+        setTurns(turnsRes)
+        setLocations(locsRes)
       }
     } finally {
       setLoading(false)
@@ -152,13 +165,13 @@ export default function AttendanceAdminPage() {
   }
 
   useEffect(() => {
-    if (!token || currentUser?.role !== 'admin') {
+    if (!token) {
       void Promise.resolve().then(() => setLoading(false))
       return
     }
     void loadAdminData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, currentUser?.role])
+  }, [token])
 
   // Derived fields with dynamic options
   const invitationFields = useMemo<CustomFormField[]>(() => invitationBaseFields.map((f) =>
@@ -616,13 +629,20 @@ export default function AttendanceAdminPage() {
     setActiveModal(null)
   }
 
-  if (currentUser?.role !== 'admin') {
+  // Determina si el usuario tiene acceso a esta vista
+  const hasAccess = currentUser?.role === 'admin'
+    || currentUser?.allowedModules?.some((m) =>
+      ['geolocalizacion', 'porcentaje-asistencia', 'facturacion', 'informes', 'configuracion'].includes(m)
+    )
+    || currentUser?.cargo?.toLowerCase().includes('supervisor')
+
+  if (!hasAccess) {
     return (
       <div className="pg">
         <div className="pg__access-denied">
           <Icon name="icon-shield" size={40} />
           <h2>Acceso restringido</h2>
-          <p>Solo los administradores pueden acceder a la gestion de asistencia.</p>
+          <p>No tienes permisos para acceder a esta seccion. Contacta al administrador.</p>
         </div>
       </div>
     )
