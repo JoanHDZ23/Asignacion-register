@@ -1459,7 +1459,18 @@ button, input, textarea, select { font: inherit; }
 }
 
 /* ─── Turnos agrupados (panel asistencia) ───────────────── */
-.grouped-turns-list { display: grid; gap: .5rem; padding: .5rem; }
+.grouped-turns-list { display: grid; gap: 1rem; padding: .5rem; }
+
+/* Location group — agrupa turnos por ubicación */
+.location-group { display: grid; gap: .5rem; }
+.location-group__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem .75rem; background: var(--clr-surface); border-radius: var(--radius-lg);
+  border: 1px solid var(--clr-border); border-left: 3px solid var(--clr-purple-mid);
+}
+.location-group__title { display: flex; align-items: center; gap: .5rem; }
+.location-group__title strong { font-size: 14px; color: var(--clr-text); }
+.location-group__turnos { display: grid; gap: .4rem; padding-left: .5rem; }
 
 .grouped-turn-card {
   border: 1px solid var(--clr-border);

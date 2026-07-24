@@ -378,36 +378,68 @@ export default function AttendanceAdminPage() {
     URL.revokeObjectURL(url)
   }
 
-  // ── Turnos agrupados por ubicación + horario ─────────────
-  const groupedTurns = useMemo(() => {
-    const map = new Map<string, {
-      key: string; ubicacion: string; locationId: string; fecha: string
-      hora: string; horaFin: string; titulo: string
-      mapsUrl: string | null
+  // ── Turnos agrupados por ubicación ─────────────────────────
+  type GroupedByLocation = {
+    key: string
+    ubicacion: string
+    locationId: string
+    mapsUrl: string | null
+    turnos: Array<{
+      subKey: string
+      fecha: string
+      hora: string
+      horaFin: string
+      titulo: string
       empleados: typeof attendanceRows
-    }>()
+    }>
+  }
+
+  const groupedTurns = useMemo(() => {
+    const locationMap = new Map<string, GroupedByLocation>()
 
     for (const row of attendanceRows) {
-      const key = `${row.locationId}|${row.fecha}|${row.horarioTurno}`
+      const locKey = row.locationId || row.ubicacion || 'sin-ubicacion'
       const loc = locations.find((l) => l.id === row.locationId)
       const mapsUrl = loc?.latitud && loc?.longitud
         ? `https://www.google.com/maps?q=${loc.latitud},${loc.longitud}`
         : null
 
-      const existing = map.get(key) ?? {
-        key, ubicacion: row.ubicacion, locationId: row.locationId,
-        fecha: row.fecha, hora: row.horarioTurno.split(' – ')[0] ?? '',
-        horaFin: row.horarioTurno.split(' – ')[1] ?? '',
-        titulo: row.turnoTitulo, mapsUrl, empleados: [],
+      if (!locationMap.has(locKey)) {
+        locationMap.set(locKey, {
+          key: locKey,
+          ubicacion: row.ubicacion || 'Sin ubicación',
+          locationId: row.locationId,
+          mapsUrl,
+          turnos: [],
+        })
       }
-      existing.empleados.push(row)
-      map.set(key, existing)
+
+      const locGroup = locationMap.get(locKey)!
+      const subKey = `${row.fecha}|${row.horarioTurno}`
+      let turnoGroup = locGroup.turnos.find((t) => t.subKey === subKey)
+      if (!turnoGroup) {
+        turnoGroup = {
+          subKey,
+          fecha: row.fecha,
+          hora: row.horarioTurno.split(' – ')[0] ?? '',
+          horaFin: row.horarioTurno.split(' – ')[1] ?? '',
+          titulo: row.turnoTitulo,
+          empleados: [],
+        }
+        locGroup.turnos.push(turnoGroup)
+      }
+      turnoGroup.empleados.push(row)
     }
 
-    return [...map.values()].sort((a, b) => {
-      if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha)
-      return a.hora.localeCompare(b.hora)
-    })
+    // Ordena turnos dentro de cada ubicación por fecha desc, hora asc
+    for (const group of locationMap.values()) {
+      group.turnos.sort((a, b) => {
+        if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha)
+        return a.hora.localeCompare(b.hora)
+      })
+    }
+
+    return [...locationMap.values()].sort((a, b) => a.ubicacion.localeCompare(b.ubicacion))
   }, [attendanceRows, locations])
 
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
@@ -887,121 +919,132 @@ export default function AttendanceAdminPage() {
         </div>
 
         <div className="data-card">
-          {/* ── Vista agrupada por turno (ubicación + horario) ── */}
+          {/* ── Vista agrupada por ubicación ── */}
           {groupedTurns.length ? (
             <div className="grouped-turns-list">
-              {groupedTurns.map((group) => {
-                const isExpanded = expandedGroup === group.key
-                const totalHoras = group.empleados.reduce((s, e) => s + e.horas, 0)
-                return (
-                  <article key={group.key} className={`grouped-turn-card${isExpanded ? ' grouped-turn-card--expanded' : ''}`}>
-                    <button
-                      type="button"
-                      className="grouped-turn-card__header"
-                      onClick={() => setExpandedGroup(isExpanded ? null : group.key)}
-                    >
-                      <div className="grouped-turn-card__info">
-                        <strong>{group.titulo || group.ubicacion}</strong>
-                        <span>{group.fecha} · {group.hora}{group.horaFin ? ` – ${group.horaFin}` : ''}</span>
-                        <span className="grouped-turn-card__location">
-                          <Icon name="icon-map-pin" size={12} />
-                          {group.ubicacion}
-                        </span>
-                      </div>
-                      <div className="grouped-turn-card__stats">
-                        <span className="detail-chip"><strong>{group.empleados.length}</strong> empleados</span>
-                        {totalHoras > 0 && <span className="hours-badge">{fmtH(totalHoras)}</span>}
-                      </div>
-                      <div className="grouped-turn-card__actions-header">
-                        {group.mapsUrl && (
-                          <a href={group.mapsUrl} target="_blank" rel="noopener noreferrer" className="location-link"
-                            onClick={(e) => e.stopPropagation()}>
-                            <Icon name="icon-map-pin" size={13} /> Mapa
-                          </a>
-                        )}
-                        <Icon name="icon-arrow-right" size={14} />
-                      </div>
-                    </button>
+              {groupedTurns.map((locGroup) => (
+                <div key={locGroup.key} className="location-group">
+                  <div className="location-group__header">
+                    <div className="location-group__title">
+                      <Icon name="icon-map-pin" size={16} />
+                      <strong>{locGroup.ubicacion}</strong>
+                      <span className="detail-chip"><strong>{locGroup.turnos.reduce((s, t) => s + t.empleados.length, 0)}</strong> asignaciones</span>
+                    </div>
+                    {locGroup.mapsUrl && (
+                      <a href={locGroup.mapsUrl} target="_blank" rel="noopener noreferrer" className="location-link">
+                        <Icon name="icon-map-pin" size={13} /> Ver en mapa
+                      </a>
+                    )}
+                  </div>
+                  <div className="location-group__turnos">
+                    {locGroup.turnos.map((turno) => {
+                      const subKey = `${locGroup.key}|${turno.subKey}`
+                      const isExpanded = expandedGroup === subKey
+                      const totalHoras = turno.empleados.reduce((s, e) => s + e.horas, 0)
+                      return (
+                        <article key={subKey} className={`grouped-turn-card${isExpanded ? ' grouped-turn-card--expanded' : ''}`}>
+                          <button
+                            type="button"
+                            className="grouped-turn-card__header"
+                            onClick={() => setExpandedGroup(isExpanded ? null : subKey)}
+                          >
+                            <div className="grouped-turn-card__info">
+                              <strong>{turno.fecha}</strong>
+                              <span>{turno.hora}{turno.horaFin ? ` – ${turno.horaFin}` : ''}</span>
+                            </div>
+                            <div className="grouped-turn-card__stats">
+                              <span className="detail-chip"><strong>{turno.empleados.length}</strong> empleados</span>
+                              {totalHoras > 0 && <span className="hours-badge">{fmtH(totalHoras)}</span>}
+                            </div>
+                            <div className="grouped-turn-card__actions-header">
+                              <Icon name={isExpanded ? 'icon-arrow-down' : 'icon-arrow-right'} size={14} />
+                            </div>
+                          </button>
 
-                    {isExpanded && (
-                      <div className="grouped-turn-card__body">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Empleado</th>
-                              <th>Entrada</th>
-                              <th>Salida</th>
-                              <th>Horas</th>
-                              <th>Estado</th>
-                              <th></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {group.empleados.map((row) => (
-                              <tr key={row.turnId}>
-                                <td>
-                                  <div className="person-cell">
-                                    <div className="person-cell__avatar">
-                                      {row.nombre.split(' ').slice(0,2).map((p) => p[0] ?? '').join('').toUpperCase()}
+                          {isExpanded && (
+                            <div className="grouped-turn-card__body">
+                              <table className="data-table">
+                                <thead>
+                                  <tr>
+                                    <th>Empleado</th>
+                                    <th>Entrada</th>
+                                    <th>Salida</th>
+                                    <th>Horas</th>
+                                    <th>Estado</th>
+                                    <th></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {turno.empleados.map((row) => (
+                                    <tr key={row.turnId}>
+                                      <td>
+                                        <div className="person-cell">
+                                          <div className="person-cell__avatar">
+                                            {row.nombre.split(' ').slice(0,2).map((p) => p[0] ?? '').join('').toUpperCase()}
+                                          </div>
+                                          <div className="person-cell__meta">
+                                            <strong>{row.nombre}</strong>
+                                            <span>{row.cargo}</span>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td>{row.entrada ? <span className="attend-time attend-time--in">{row.entrada}</span> : '—'}</td>
+                                      <td>{row.salida ? <span className="attend-time attend-time--out">{row.salida}</span> : '—'}</td>
+                                      <td>{row.horas > 0 ? <span className="hours-badge">{fmtH(row.horas)}</span> : '—'}</td>
+                                      <td><span className={`status-badge status-badge--${row.estado}`}>{statusLabel[row.estado]}</span></td>
+                                      <td>
+                                        {currentUser?.role === 'admin' && (
+                                          <button className="table-action-btn table-action-btn--delete" type="button" title="Quitar del turno"
+                                            onClick={() => { setDeletingTurn(row.turnObj); setActiveModal('turn-delete') }}>
+                                            <Icon name="icon-x-circle" size={14} />
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {/* Acciones del turno (solo admin) */}
+                              {currentUser?.role === 'admin' && (
+                                <div className="grouped-turn-card__add">
+                                  <Button type="button" size="sm" variant="ghost"
+                                    onClick={() => openEditTurn(turno.empleados[0]?.turnObj as TurnResponse)}>
+                                    <Icon name="icon-clipboard" size={13} /> Editar turno
+                                  </Button>
+                                  <Button type="button" size="sm" variant="ghost"
+                                    onClick={() => setAddingToGroup(subKey === addingToGroup ? null : subKey)}>
+                                    <Icon name="icon-plus" size={13} /> Agregar empleado
+                                  </Button>
+                                  {addingToGroup === subKey && (
+                                    <div className="add-employee-inline">
+                                      <select
+                                        value={addEmployeeId}
+                                        onChange={(e) => setAddEmployeeId(e.target.value)}
+                                        className="att-filter select"
+                                      >
+                                        <option value="">Selecciona un empleado</option>
+                                        {workers
+                                          .filter((w) => !turno.empleados.some((e) => e.workerId === w.id))
+                                          .map((w) => <option key={w.id} value={w.id}>{w.nombreCompleto} — {w.cargo}</option>)
+                                        }
+                                      </select>
+                                      <Button type="button" size="sm" variant="primary"
+                                        disabled={!addEmployeeId || addingEmployee}
+                                        onClick={() => void handleAddEmployee({ ...turno, key: subKey, ubicacion: locGroup.ubicacion, locationId: locGroup.locationId, mapsUrl: locGroup.mapsUrl } as any)}>
+                                        {addingEmployee ? 'Agregando...' : 'Confirmar'}
+                                      </Button>
                                     </div>
-                                    <div className="person-cell__meta">
-                                      <strong>{row.nombre}</strong>
-                                      <span>{row.cargo}</span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td>{row.entrada ? <span className="attend-time attend-time--in">{row.entrada}</span> : '—'}</td>
-                                <td>{row.salida ? <span className="attend-time attend-time--out">{row.salida}</span> : '—'}</td>
-                                <td>{row.horas > 0 ? <span className="hours-badge">{fmtH(row.horas)}</span> : '—'}</td>
-                                <td><span className={`status-badge status-badge--${row.estado}`}>{statusLabel[row.estado]}</span></td>
-                                <td>
-                                  <button className="table-action-btn table-action-btn--delete" type="button" title="Quitar del turno"
-                                    onClick={() => { setDeletingTurn(row.turnObj); setActiveModal('turn-delete') }}>
-                                    <Icon name="icon-x-circle" size={14} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        {/* Botón agregar empleado al turno */}
-                        <div className="grouped-turn-card__add">
-                          {currentUser?.role === 'admin' && (
-                            <Button type="button" size="sm" variant="ghost"
-                              onClick={() => openEditTurn(group.empleados[0]?.turnObj as TurnResponse)}>
-                              <Icon name="icon-clipboard" size={13} /> Editar turno
-                            </Button>
-                          )}
-                          <Button type="button" size="sm" variant="ghost"
-                            onClick={() => setAddingToGroup(group.key === addingToGroup ? null : group.key)}>
-                            <Icon name="icon-plus" size={13} /> Agregar empleado
-                          </Button>
-                          {addingToGroup === group.key && (
-                            <div className="add-employee-inline">
-                              <select
-                                value={addEmployeeId}
-                                onChange={(e) => setAddEmployeeId(e.target.value)}
-                                className="att-filter select"
-                              >
-                                <option value="">Selecciona un empleado</option>
-                                {workers
-                                  .filter((w) => !group.empleados.some((e) => e.workerId === w.id))
-                                  .map((w) => <option key={w.id} value={w.id}>{w.nombreCompleto} — {w.cargo}</option>)
-                                }
-                              </select>
-                              <Button type="button" size="sm" variant="primary"
-                                disabled={!addEmployeeId || addingEmployee}
-                                onClick={() => void handleAddEmployee(group)}>
-                                {addingEmployee ? 'Agregando...' : 'Confirmar'}
-                              </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      </div>
-                    )}
-                  </article>
-                )
-              })}
+                        </article>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <p className="table-empty" style={{ padding: '1.5rem', textAlign: 'center' }}>
