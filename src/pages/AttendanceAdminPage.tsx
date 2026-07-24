@@ -14,7 +14,7 @@ import { type AccessModule } from '../lib/access'
 import { getCurrentToken, getCurrentUser, setCurrentUser } from '../lib/auth-storage'
 
 type FeedbackState = { kind: 'idle' | 'success' | 'error'; message?: string }
-type ActiveModal = 'employee' | 'position' | 'location' | 'location-edit' | 'location-delete' | 'turn' | 'turn-delete' | 'turn-edit' | null
+type ActiveModal = 'employee' | 'position' | 'location' | 'location-edit' | 'location-delete' | 'turn' | 'turn-delete' | 'turn-edit' | 'worker-edit' | 'worker-delete' | null
 
 const accessModuleLabels: Record<AccessModule, string> = {
   dashboard: 'Inicio',
@@ -164,6 +164,8 @@ export default function AttendanceAdminPage() {
   const [editingPosition, setEditingPosition] = useState<PositionResponse | null>(null)
   const [positionPermissions, setPositionPermissions] = useState<AccessModule[]>(['dashboard', 'turnos-fijos'])
   const [editingLocation, setEditingLocation] = useState<LocationResponse | null>(null)
+  const [editingWorker, setEditingWorker] = useState<UserResponse | null>(null)
+  const [deletingWorker, setDeletingWorker] = useState<UserResponse | null>(null)
 
   // Multi-employee turn form state
   const [turnForm, setTurnForm] = useState({
@@ -697,6 +699,40 @@ export default function AttendanceAdminPage() {
     }
   }
 
+  const handleEditWorker = async (values: Record<string, string>) => {
+    if (!token || !editingWorker) return
+    try {
+      await apiRequest(`/users/${editingWorker.id}`, {
+        method: 'PATCH',
+        token,
+        body: {
+          nombreCompleto: values.nombreCompleto,
+          correo: values.correo,
+          telefono: values.telefono,
+          cargo: values.cargo,
+          positionId: values.positionId || undefined,
+        },
+      })
+      setActiveModal(null)
+      setEditingWorker(null)
+      await loadAdminData()
+    } catch (err) {
+      setTurnFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error al actualizar empleado.' })
+    }
+  }
+
+  const handleDeleteWorker = async () => {
+    if (!token || !deletingWorker) return
+    try {
+      await apiRequest(`/users/${deletingWorker.id}`, { method: 'DELETE', token })
+      setActiveModal(null)
+      setDeletingWorker(null)
+      await loadAdminData()
+    } catch (err) {
+      setTurnFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error al eliminar empleado.' })
+    }
+  }
+
   const openEditTurn = (turn: TurnResponse) => {
     setEditingTurnData({
       turn,
@@ -1146,6 +1182,16 @@ export default function AttendanceAdminPage() {
               <p className="info-card__detail"><Icon name="icon-briefcase" size={13} />{w.cargo}</p>
               <p className="info-card__detail"><Icon name="icon-user" size={13} />{w.correo}</p>
               <p className="info-card__detail"><Icon name="icon-building" size={13} />{companyName}</p>
+              {currentUser?.role === 'admin' && (
+                <div className="info-card__actions">
+                  <Button type="button" size="sm" variant="ghost" onClick={() => { setEditingWorker(w); setActiveModal('worker-edit') }}>
+                    <Icon name="icon-clipboard" size={13} /> Editar
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" className="btn-danger-text" onClick={() => { setDeletingWorker(w); setActiveModal('worker-delete') }}>
+                    <Icon name="icon-x-circle" size={13} /> Eliminar
+                  </Button>
+                </div>
+              )}
             </div>
           )) : (
             <div className="info-card info-card--empty">
@@ -1482,6 +1528,46 @@ export default function AttendanceAdminPage() {
           <Button type="button" variant="ghost" onClick={() => { setDeletingTurn(null); setActiveModal(null) }}>Cancelar</Button>
           <Button type="button" variant="primary" className="btn-danger" onClick={() => void handleDeleteTurn()}>
             <Icon name="icon-x-circle" size={16} /> Eliminar turno
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Modal: Editar empleado */}
+      <Modal
+        open={activeModal === 'worker-edit'}
+        title={`Editar: ${editingWorker?.nombreCompleto ?? ''}`}
+        onClose={() => { setEditingWorker(null); setActiveModal(null) }}
+      >
+        {editingWorker && (
+          <CustomForm
+            key={editingWorker.id}
+            title=""
+            fields={[
+              { name: 'nombreCompleto', label: 'Nombre completo', defaultValue: editingWorker.nombreCompleto, required: true },
+              { name: 'correo', label: 'Correo', defaultValue: editingWorker.correo, required: true },
+              { name: 'telefono', label: 'Teléfono', defaultValue: editingWorker.telefono ?? '' },
+              { name: 'cargo', label: 'Cargo', defaultValue: editingWorker.cargo },
+              { name: 'positionId', label: 'Cargo (puesto)', type: 'select', defaultValue: editingWorker.positionId ?? '',
+                options: positions.map((p) => ({ label: p.nombre, value: p.id })) },
+            ]}
+            submitLabel="Guardar cambios"
+            showReset={false}
+            onSubmit={(v) => void handleEditWorker(v as Record<string, string>)}
+          />
+        )}
+      </Modal>
+
+      {/* Modal: Confirmar eliminación de empleado */}
+      <Modal
+        open={activeModal === 'worker-delete'}
+        title="Eliminar empleado"
+        description={`¿Seguro que deseas eliminar a "${deletingWorker?.nombreCompleto ?? ''}"? Esta acción no se puede deshacer.`}
+        onClose={() => { setDeletingWorker(null); setActiveModal(null) }}
+      >
+        <div className="confirm-actions">
+          <Button type="button" variant="ghost" onClick={() => { setDeletingWorker(null); setActiveModal(null) }}>Cancelar</Button>
+          <Button type="button" variant="primary" className="btn-danger" onClick={() => void handleDeleteWorker()}>
+            <Icon name="icon-x-circle" size={16} /> Eliminar empleado
           </Button>
         </div>
       </Modal>
