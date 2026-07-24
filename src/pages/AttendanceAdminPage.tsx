@@ -173,6 +173,8 @@ export default function AttendanceAdminPage() {
   const [hoursLoading, setHoursLoading] = useState(false)
   const [hoursFilterUser, setHoursFilterUser] = useState('')
   const [hoursRange, setHoursRange] = useState<'15' | '30'>('15')
+  const [billingFilterWorker, setBillingFilterWorker] = useState('')
+  const [billingPeriod, setBillingPeriod] = useState<'' | '1' | '2'>('')
 
   // Multi-employee turn form state
   const [turnForm, setTurnForm] = useState({
@@ -357,6 +359,17 @@ export default function AttendanceAdminPage() {
     for (const row of attendanceRows) {
       if (row.estado === 'rechazado') continue
       if (!row.entrada) continue  // sin checkIn → no facturar este turno
+
+      // Filtro por empleado en cuenta de cobro
+      if (billingFilterWorker && row.workerId !== billingFilterWorker) continue
+
+      // Filtro por quincena (1a mitad: días 1-15, 2a mitad: días 16-fin de mes)
+      if (billingPeriod && row.fecha) {
+        const day = new Date(row.fecha + 'T12:00:00').getDate()
+        if (billingPeriod === '1' && day > 15) continue
+        if (billingPeriod === '2' && day <= 15) continue
+      }
+
       const cur = map.get(row.workerId) ?? {
         workerId: row.workerId, nombre: row.nombre, cargo: row.cargo,
         documento: workers.find((w) => w.id === row.workerId)?.numeroDocumento ?? '',
@@ -370,7 +383,7 @@ export default function AttendanceAdminPage() {
     return [...map.values()]
       .map((v) => ({ ...v, dias: v.diasTrabajados.size }))
       .sort((a, b) => b.horasTotales - a.horasTotales)
-  }, [attendanceRows, workers])
+  }, [attendanceRows, workers, billingFilterWorker, billingPeriod])
 
   const totalBillingHours = useMemo(
     () => billingRows.reduce((s, r) => s + r.horasTotales, 0), [billingRows])
@@ -1133,23 +1146,49 @@ export default function AttendanceAdminPage() {
       </div>
 
       {/* ── Cuenta de cobro ──────────────────────────────── */}
-      {billingRows.length > 0 && (
-        <div className="pg__section">
-          <div className="section-header">
-            <h2>Cuenta de cobro</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
-              <Button type="button" variant="ghost" size="sm" onClick={openHoursModal}>
-                <Icon name="icon-clock" size={14} /> Historial de horas
-              </Button>
-              <span className="section-header__count">
-                {billingRows.length} empleado(s) · <strong>{fmtH(totalBillingHours)}</strong> totales
-              </span>
-              <Button type="button" variant="ghost" size="sm" onClick={exportBillingCSV}>
-                <Icon name="icon-activity" size={14} /> Exportar CSV
-              </Button>
-            </div>
+      <div className="pg__section">
+        <div className="section-header">
+          <h2>Cuenta de cobro</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+            <Button type="button" variant="ghost" size="sm" onClick={openHoursModal}>
+              <Icon name="icon-clock" size={14} /> Historial de horas
+            </Button>
+            <span className="section-header__count">
+              {billingRows.length} empleado(s) · <strong>{fmtH(totalBillingHours)}</strong> totales
+            </span>
+            <Button type="button" variant="ghost" size="sm" onClick={exportBillingCSV}>
+              <Icon name="icon-activity" size={14} /> Exportar CSV
+            </Button>
           </div>
-          <div className="data-card">
+        </div>
+
+        {/* Filtros de cuenta de cobro */}
+        <div className="filters-row" style={{ marginBottom: '.75rem' }}>
+          <label className="att-filter">
+            <span>Empleado</span>
+            <select value={billingFilterWorker} onChange={(e) => setBillingFilterWorker(e.target.value)}>
+              <option value="">Todos los empleados</option>
+              {workers.map((w) => <option key={w.id} value={w.id}>{w.nombreCompleto}</option>)}
+            </select>
+          </label>
+          <label className="att-filter">
+            <span>Quincena</span>
+            <select value={billingPeriod} onChange={(e) => setBillingPeriod(e.target.value as '' | '1' | '2')}>
+              <option value="">Todo el mes</option>
+              <option value="1">1ª quincena (1-15)</option>
+              <option value="2">2ª quincena (16-fin)</option>
+            </select>
+          </label>
+          {(billingFilterWorker || billingPeriod) && (
+            <button type="button" className="att-filter__clear"
+              onClick={() => { setBillingFilterWorker(''); setBillingPeriod('') }}>
+              <Icon name="icon-x" size={13} /> Limpiar
+            </button>
+          )}
+        </div>
+
+        {billingRows.length > 0 ? (
+        <div className="data-card">
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
@@ -1195,8 +1234,10 @@ export default function AttendanceAdminPage() {
               </table>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <p style={{ textAlign: 'center', padding: '1rem', color: 'var(--clr-text-2)' }}>Sin registros de horas para los filtros seleccionados.</p>
+        )}
+      </div>
 
       {/* Highlights strip */}
       <div className="highlight-strip">
