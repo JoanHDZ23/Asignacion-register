@@ -197,7 +197,8 @@ export default function AttendanceAdminPage() {
     if (!token) return
     try {
       // Admin y supervisor usan /management. Otros roles usan /turns
-      const isManagement = currentUser?.role === 'admin' || currentUser?.cargo?.toLowerCase().includes('supervisor')
+      const isManagement = currentUser?.role === 'admin' || currentUser?.role === 'supervisor'
+        || currentUser?.cargo?.toLowerCase().includes('supervisor')
 
       if (isManagement) {
         const response = await apiRequest<CompanyManagementResponse>('/companies/management', { token })
@@ -797,6 +798,7 @@ export default function AttendanceAdminPage() {
 
   // Determina si el usuario tiene acceso a esta vista
   const hasAccess = currentUser?.role === 'admin'
+    || currentUser?.role === 'supervisor'
     || currentUser?.allowedModules?.some((m) =>
       ['geolocalizacion', 'porcentaje-asistencia', 'facturacion', 'informes', 'configuracion'].includes(m)
     )
@@ -1284,13 +1286,15 @@ export default function AttendanceAdminPage() {
                 {pos.permissions.length ? pos.permissions.map((p) => accessModuleLabels[p]).join(', ') : 'Sin accesos'}
               </p>
               <div className="info-card__actions">
-                <Button type="button" variant="ghost" size="sm" onClick={() => {
-                  setEditingPosition(pos)
-                  setPositionPermissions(pos.permissions?.length ? pos.permissions : ['dashboard', 'turnos-fijos'])
-                  setActiveModal('position')
-                }}>
-                  <Icon name="icon-edit" size={14} /> Configurar
-                </Button>
+                {currentUser?.role === 'admin' && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => {
+                    setEditingPosition(pos)
+                    setPositionPermissions(pos.permissions?.length ? pos.permissions : ['dashboard', 'turnos-fijos'])
+                    setActiveModal('position')
+                  }}>
+                    <Icon name="icon-edit" size={14} /> Configurar
+                  </Button>
+                )}
                 <Button type="button" variant="secondary" size="sm" onClick={() => void handleInviteFromPosition(pos)}>
                   <Icon name="icon-link" size={14} /> Generar link
                 </Button>
@@ -1335,22 +1339,26 @@ export default function AttendanceAdminPage() {
                     <td>{loc.radioTolerancia ?? '-'}</td>
                     <td>
                       <div className="table-actions">
-                        <button
-                          className="table-action-btn table-action-btn--edit"
-                          type="button"
-                          title="Editar ubicacion"
-                          onClick={() => { setEditingLocation(loc); setActiveModal('location-edit') }}
-                        >
-                          <Icon name="icon-edit" size={14} />
-                        </button>
-                        <button
-                          className="table-action-btn table-action-btn--delete"
-                          type="button"
-                          title="Eliminar ubicacion"
-                          onClick={() => { setEditingLocation(loc); setActiveModal('location-delete') }}
-                        >
-                          <Icon name="icon-x-circle" size={14} />
-                        </button>
+                        {currentUser?.role === 'admin' && (
+                          <>
+                            <button
+                              className="table-action-btn table-action-btn--edit"
+                              type="button"
+                              title="Editar ubicacion"
+                              onClick={() => { setEditingLocation(loc); setActiveModal('location-edit') }}
+                            >
+                              <Icon name="icon-edit" size={14} />
+                            </button>
+                            <button
+                              className="table-action-btn table-action-btn--delete"
+                              type="button"
+                              title="Eliminar ubicacion"
+                              onClick={() => { setEditingLocation(loc); setActiveModal('location-delete') }}
+                            >
+                              <Icon name="icon-x-circle" size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
