@@ -4,9 +4,13 @@ import { requireAuth, requireRole } from '../middleware/auth.js'
 
 export const usersRouter = Router()
 
-usersRouter.use(requireAuth, requireRole(['admin']))
+usersRouter.use(requireAuth)
 
-usersRouter.get('/', async (request, response) => {
+// Supervisor can read users, create invitations. Admin can do everything.
+const adminOnly = requireRole(['admin'])
+const adminOrSupervisor = requireRole(['admin', 'supervisor'])
+
+usersRouter.get('/', adminOrSupervisor, async (request, response) => {
   const db = await readDatabase()
   const companyId =
     request.authUser!.companyId ||
@@ -17,7 +21,7 @@ usersRouter.get('/', async (request, response) => {
   response.json(users)
 })
 
-usersRouter.get('/invitations', async (request, response) => {
+usersRouter.get('/invitations', adminOrSupervisor, async (request, response) => {
   const db = await readDatabase()
   const companyId =
     request.authUser!.companyId ||
@@ -33,7 +37,7 @@ usersRouter.get('/invitations', async (request, response) => {
   response.json(invitations)
 })
 
-usersRouter.post('/invitations', async (request, response) => {
+usersRouter.post('/invitations', adminOrSupervisor, async (request, response) => {
   const { positionId, role } = request.body ?? {}
 
   if (!positionId) {
@@ -86,7 +90,7 @@ usersRouter.post('/invitations', async (request, response) => {
   })
 })
 
-usersRouter.post('/', async (request, response) => {
+usersRouter.post('/', adminOnly, async (request, response) => {
   const {
     nombreCompleto,
     tipoDocumento,
@@ -159,7 +163,7 @@ usersRouter.post('/', async (request, response) => {
 /**
  * GET /users/:userId — detalle de un empleado
  */
-usersRouter.get('/:userId', async (request, response) => {
+usersRouter.get('/:userId', adminOrSupervisor, async (request, response) => {
   const db = await readDatabase()
   const companyId =
     request.authUser!.companyId ||
@@ -180,7 +184,7 @@ usersRouter.get('/:userId', async (request, response) => {
 /**
  * PATCH /users/:userId — editar datos del empleado
  */
-usersRouter.patch('/:userId', async (request, response) => {
+usersRouter.patch('/:userId', adminOnly, async (request, response) => {
   const db = await readDatabase()
   const companyId =
     request.authUser!.companyId ||
@@ -224,7 +228,7 @@ usersRouter.patch('/:userId', async (request, response) => {
 /**
  * DELETE /users/:userId — eliminar empleado
  */
-usersRouter.delete('/:userId', async (request, response) => {
+usersRouter.delete('/:userId', adminOnly, async (request, response) => {
   const db = await readDatabase()
   const companyId =
     request.authUser!.companyId ||
