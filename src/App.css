@@ -1437,3 +1437,53 @@ button, input, textarea, select { font: inherit; }
   line-height: 1.3;
   text-align: left;
 }
+
+/* ─── Turnos agrupados (panel asistencia) ───────────────── */
+.grouped-turns-list { display: grid; gap: .5rem; padding: .5rem; }
+
+.grouped-turn-card {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  background: var(--clr-bg);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+.grouped-turn-card--expanded { border-color: var(--clr-purple-mid); }
+
+.grouped-turn-card__header {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.grouped-turn-card__header:hover { background: var(--clr-surface); }
+
+.grouped-turn-card__info { display: grid; gap: 2px; }
+.grouped-turn-card__info strong { font-size: 14px; color: var(--clr-text); }
+.grouped-turn-card__info span { font-size: 12.5px; color: var(--clr-text-2); }
+.grouped-turn-card__location {
+  display: inline-flex; align-items: center; gap: .25rem;
+  color: var(--clr-purple-mid); font-weight: 500;
+}
+
+.grouped-turn-card__stats { display: flex; align-items: center; gap: .5rem; }
+.grouped-turn-card__actions-header { display: flex; align-items: center; gap: .75rem; }
+
+.grouped-turn-card__body {
+  border-top: 1px solid var(--clr-border);
+  padding: .75rem;
+  overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+  .grouped-turn-card__header { grid-template-columns: 1fr; gap: .6rem; }
+  .grouped-turn-card__stats { justify-self: flex-start; }
+  .grouped-turn-card__actions-header { justify-self: flex-end; }
+}

@@ -306,6 +306,40 @@ export default function AttendanceAdminPage() {
     URL.revokeObjectURL(url)
   }
 
+  // ── Turnos agrupados por ubicación + horario ─────────────
+  const groupedTurns = useMemo(() => {
+    const map = new Map<string, {
+      key: string; ubicacion: string; locationId: string; fecha: string
+      hora: string; horaFin: string; titulo: string
+      mapsUrl: string | null
+      empleados: typeof attendanceRows
+    }>()
+
+    for (const row of attendanceRows) {
+      const key = `${row.locationId}|${row.fecha}|${row.horarioTurno}`
+      const loc = locations.find((l) => l.id === row.locationId)
+      const mapsUrl = loc?.latitud && loc?.longitud
+        ? `https://www.google.com/maps?q=${loc.latitud},${loc.longitud}`
+        : null
+
+      const existing = map.get(key) ?? {
+        key, ubicacion: row.ubicacion, locationId: row.locationId,
+        fecha: row.fecha, hora: row.horarioTurno.split(' – ')[0] ?? '',
+        horaFin: row.horarioTurno.split(' – ')[1] ?? '',
+        titulo: row.turnoTitulo, mapsUrl, empleados: [],
+      }
+      existing.empleados.push(row)
+      map.set(key, existing)
+    }
+
+    return [...map.values()].sort((a, b) => {
+      if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha)
+      return a.hora.localeCompare(b.hora)
+    })
+  }, [attendanceRows, locations])
+
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
+
   const metrics = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
     const todayTurns = turns.filter((t) => t.fecha === today)
@@ -707,85 +741,94 @@ export default function AttendanceAdminPage() {
         </div>
 
         <div className="data-card">
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Empleado</th>
-                  <th>Turno</th>
-                  <th>Fecha · Horario</th>
-                  <th>Ubicacion</th>
-                  <th>Entrada real</th>
-                  <th>Salida real</th>
-                  <th>Horas</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceRows.length ? attendanceRows.map((row) => (
-                  <tr key={row.turnId}>
-                    <td>
-                      <div className="person-cell">
-                        <div className="person-cell__avatar">
-                          {row.nombre.split(' ').slice(0,2).map((p) => p[0] ?? '').join('').toUpperCase()}
-                        </div>
-                        <div className="person-cell__meta">
-                          <strong>{row.nombre}</strong>
-                          <span>{row.cargo}</span>
-                        </div>
+          {/* ── Vista agrupada por turno (ubicación + horario) ── */}
+          {groupedTurns.length ? (
+            <div className="grouped-turns-list">
+              {groupedTurns.map((group) => {
+                const isExpanded = expandedGroup === group.key
+                const totalHoras = group.empleados.reduce((s, e) => s + e.horas, 0)
+                return (
+                  <article key={group.key} className={`grouped-turn-card${isExpanded ? ' grouped-turn-card--expanded' : ''}`}>
+                    <button
+                      type="button"
+                      className="grouped-turn-card__header"
+                      onClick={() => setExpandedGroup(isExpanded ? null : group.key)}
+                    >
+                      <div className="grouped-turn-card__info">
+                        <strong>{group.titulo || group.ubicacion}</strong>
+                        <span>{group.fecha} · {group.hora}{group.horaFin ? ` – ${group.horaFin}` : ''}</span>
+                        <span className="grouped-turn-card__location">
+                          <Icon name="icon-map-pin" size={12} />
+                          {group.ubicacion}
+                        </span>
                       </div>
-                    </td>
-                    <td>
-                      <div className="turn-cell">
-                        <span className="shift-badge">{row.turnoTitulo}</span>
+                      <div className="grouped-turn-card__stats">
+                        <span className="detail-chip"><strong>{group.empleados.length}</strong> empleados</span>
+                        {totalHoras > 0 && <span className="hours-badge">{fmtH(totalHoras)}</span>}
                       </div>
-                    </td>
-                    <td>
-                      <span className="turn-cell__schedule">{row.fecha} · {row.horarioTurno}</span>
-                    </td>
-                    <td>
-                      <span className="turn-cell__schedule">{row.ubicacion || '—'}</span>
-                    </td>
-                    <td>
-                      {row.entrada
-                        ? <span className="attend-time attend-time--in">{row.entrada}</span>
-                        : <span className="attend-time attend-time--pending">—</span>}
-                    </td>
-                    <td>
-                      {row.salida
-                        ? <span className="attend-time attend-time--out">{row.salida}</span>
-                        : <span className="attend-time attend-time--pending">—</span>}
-                    </td>
-                    <td>
-                      {row.horas > 0
-                        ? <span className="hours-badge">{fmtH(row.horas)}</span>
-                        : <span className="attend-time attend-time--pending">—</span>}
-                    </td>
-                    <td>
-                      <span className={`status-badge status-badge--${row.estado}`}>
-                        {statusLabel[row.estado]}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="table-action-btn table-action-btn--delete"
-                        type="button"
-                        title="Eliminar turno"
-                        onClick={() => { setDeletingTurn(row.turnObj); setActiveModal('turn-delete') }}
-                      >
-                        <Icon name="icon-x-circle" size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan={9} className="table-empty">
-                    {turns.length === 0 ? 'No hay turnos registrados.' : 'Sin resultados para los filtros aplicados.'}
-                  </td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <div className="grouped-turn-card__actions-header">
+                        {group.mapsUrl && (
+                          <a href={group.mapsUrl} target="_blank" rel="noopener noreferrer" className="location-link"
+                            onClick={(e) => e.stopPropagation()}>
+                            <Icon name="icon-map-pin" size={13} /> Mapa
+                          </a>
+                        )}
+                        <Icon name="icon-arrow-right" size={14} />
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="grouped-turn-card__body">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Empleado</th>
+                              <th>Entrada</th>
+                              <th>Salida</th>
+                              <th>Horas</th>
+                              <th>Estado</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.empleados.map((row) => (
+                              <tr key={row.turnId}>
+                                <td>
+                                  <div className="person-cell">
+                                    <div className="person-cell__avatar">
+                                      {row.nombre.split(' ').slice(0,2).map((p) => p[0] ?? '').join('').toUpperCase()}
+                                    </div>
+                                    <div className="person-cell__meta">
+                                      <strong>{row.nombre}</strong>
+                                      <span>{row.cargo}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>{row.entrada ? <span className="attend-time attend-time--in">{row.entrada}</span> : '—'}</td>
+                                <td>{row.salida ? <span className="attend-time attend-time--out">{row.salida}</span> : '—'}</td>
+                                <td>{row.horas > 0 ? <span className="hours-badge">{fmtH(row.horas)}</span> : '—'}</td>
+                                <td><span className={`status-badge status-badge--${row.estado}`}>{statusLabel[row.estado]}</span></td>
+                                <td>
+                                  <button className="table-action-btn table-action-btn--delete" type="button" title="Quitar del turno"
+                                    onClick={() => { setDeletingTurn(row.turnObj); setActiveModal('turn-delete') }}>
+                                    <Icon name="icon-x-circle" size={14} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </article>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="table-empty" style={{ padding: '1.5rem', textAlign: 'center' }}>
+              {turns.length === 0 ? 'No hay turnos registrados.' : 'Sin resultados para los filtros aplicados.'}
+            </p>
+          )}
         </div>
       </div>
 
