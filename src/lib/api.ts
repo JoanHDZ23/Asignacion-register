@@ -118,10 +118,11 @@ export type UserInvitationResponse = {
   companyId: string
   positionId: string
   cargo: string
-  role: 'admin' | 'operativo'
+  role: 'admin' | 'operativo' | 'supervisor'
   status: 'pendiente' | 'completada' | 'cancelada'
   invitedByUserId: string
   invitedUserId?: string
+  expiresAt?: string
   createdAt: string
   completedAt?: string
   invitePath: string

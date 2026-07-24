@@ -1213,27 +1213,46 @@ export default function AttendanceAdminPage() {
       <div className="pg__section">
         <div className="section-header">
           <h2>Links de invitacion</h2>
-          <span className="section-header__count">{invitations.length} generados</span>
+          <span className="section-header__count">{invitations.filter((i) => i.status === 'pendiente' && (!i.expiresAt || new Date(i.expiresAt) > new Date())).length} activos</span>
         </div>
         <div className="card-grid">
-          {invitations.length ? invitations.map((inv) => (
-            <div className="info-card" key={inv.id}>
-              <div className="info-card__header">
-                <div className="info-card__icon"><Icon name="icon-link" size={18} /></div>
-                <div>
-                  <strong>{inv.cargo}</strong>
-                  <span className={`status-badge ${inv.status === 'completada' ? 'status-badge--finalizado' : 'status-badge--pendiente'}`}>{inv.status}</span>
+          {invitations.length ? invitations
+            .filter((inv) => {
+              // Oculta expiradas pendientes
+              if (inv.status === 'pendiente' && inv.expiresAt && new Date(inv.expiresAt) <= new Date()) return false
+              return true
+            })
+            .map((inv) => {
+              const isExpired = inv.status === 'pendiente' && inv.expiresAt && new Date(inv.expiresAt) <= new Date()
+              const remainingMs = inv.expiresAt ? new Date(inv.expiresAt).getTime() - Date.now() : 0
+              const remainingMin = Math.max(0, Math.ceil(remainingMs / 60000))
+              return (
+                <div className="info-card" key={inv.id}>
+                  <div className="info-card__header">
+                    <div className="info-card__icon"><Icon name="icon-link" size={18} /></div>
+                    <div>
+                      <strong>{inv.cargo}</strong>
+                      <span className={`status-badge ${inv.status === 'completada' ? 'status-badge--finalizado' : inv.status === 'pendiente' ? 'status-badge--pendiente' : 'status-badge--rechazado'}`}>{inv.status}</span>
+                    </div>
+                  </div>
+                  <p className="info-card__detail"><Icon name="icon-briefcase" size={13} />Rol: {inv.role}</p>
+                  {inv.status === 'pendiente' && !isExpired && (
+                    <p className="info-card__countdown">
+                      <Icon name="icon-clock" size={13} />
+                      <span>{remainingMin > 0 ? `Expira en ${remainingMin} min` : 'Expirado'}</span>
+                    </p>
+                  )}
+                  <p className="info-card__url">{buildInviteLink(inv.invitePath)}</p>
+                  <div className="info-card__actions">
+                    {inv.status === 'pendiente' && !isExpired && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => void copyInviteLink(inv.invitePath)}>
+                        <Icon name="icon-copy" size={14} /> Copiar link
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <p className="info-card__detail"><Icon name="icon-briefcase" size={13} />Rol: {inv.role}</p>
-              <p className="info-card__url">{buildInviteLink(inv.invitePath)}</p>
-              <div className="info-card__actions">
-                <Button type="button" variant="ghost" size="sm" onClick={() => void copyInviteLink(inv.invitePath)}>
-                  <Icon name="icon-copy" size={14} /> Copiar link
-                </Button>
-              </div>
-            </div>
-          )) : (
+              )
+            }) : (
             <div className="info-card info-card--empty">
               <Icon name="icon-link" size={28} />
               <strong>Sin invitaciones</strong>
