@@ -17,6 +17,9 @@ export default function DashboardHomePage() {
   const [selectedPointId, setSelectedPointId] = useState<string>('')
   const currentUser = getCurrentUser()
   const isAdmin = currentUser?.role === 'admin'
+  const isSupervisor = currentUser?.role === 'supervisor'
+    || (!isAdmin && Boolean(currentUser?.cargo?.toLowerCase().includes('supervisor')))
+  const isOperativo = !isAdmin && !isSupervisor
   const allowedModules = currentUser?.allowedModules?.length
     ? currentUser.allowedModules
     : getDefaultAllowedModules(currentUser?.role ?? 'operativo')
@@ -274,6 +277,39 @@ export default function DashboardHomePage() {
           ))}
         </section>
       ) : null}
+
+      {/* Info personal — supervisores y operativos */}
+      {(isSupervisor || isOperativo) && currentUser && (
+        <section className="content-card personal-info-card">
+          <h3>Mi información</h3>
+          <div className="personal-info-grid">
+            <div className="personal-info-item">
+              <span className="personal-info-label">Nombre completo</span>
+              <strong>{currentUser.nombreCompleto}</strong>
+            </div>
+            <div className="personal-info-item">
+              <span className="personal-info-label">Cargo</span>
+              <strong>{currentUser.cargo ?? 'Sin cargo asignado'}</strong>
+            </div>
+            <div className="personal-info-item">
+              <span className="personal-info-label">Rol</span>
+              <strong className="personal-info-role">{isSupervisor ? 'Supervisor' : 'Operativo'}</strong>
+            </div>
+            <div className="personal-info-item">
+              <span className="personal-info-label">Correo</span>
+              <strong>{currentUser.correo ?? '—'}</strong>
+            </div>
+            <div className="personal-info-item">
+              <span className="personal-info-label">Empresa</span>
+              <strong>{company?.nombre ?? '—'}</strong>
+            </div>
+            <div className="personal-info-item">
+              <span className="personal-info-label">Turnos programados</span>
+              <strong>{turns.length}</strong>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Accesos rápidos + turnos próximos — solo si tiene algún módulo */}
       {quickAccessItems.length > 0 || hasAsignacion ? (

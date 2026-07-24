@@ -746,7 +746,8 @@ export default function AttendanceAdminPage() {
         ))}
       </div>
 
-      {/* Quick actions */}
+      {/* Quick actions — solo admin puede crear/registrar */}
+      {currentUser?.role === 'admin' && (
       <div className="pg__section">
         <div className="section-header">
           <h2>Acciones rapidas</h2>
@@ -770,6 +771,7 @@ export default function AttendanceAdminPage() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Feedback banners */}
       {invitationFeedback.message && (
