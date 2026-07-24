@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { resolveCompanyIdForUser } from '../lib/access.js'
 import { createTurn, deleteTurn, readDatabase, updateTurn } from '../lib/database.js'
+import { getHorasTurnoCollection } from '../lib/mongodb.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import type { TurnStatus } from '../types.js'
 
@@ -485,4 +486,47 @@ turnsRouter.delete('/:turnId', requireRole(['admin']), async (request, response)
 
   await deleteTurn(turnId)
   response.status(204).send()
+})
+
+/**
+ * GET /turns/hours-history
+ * Devuelve el historial de horas trabajadas (horasTurno) de la empresa.
+ * Query params: from (fecha inicio), to (fecha fin), userId (opcional)
+ */
+turnsRouter.get('/hours-history', requireRole(['admin', 'supervisor']), async (request, response) => {
+  const { from, to, userId } = request.query as { from?: string; to?: string; userId?: string }
+
+  const db = await readDatabase()
+  const currentUser = db.users.find((u) => u.id === request.authUser!.userId)
+  const companyId = resolveCompanyIdForUser(db, currentUser)
+
+  const col = await getHorasTurnoCollection()
+
+  // Build filter
+  const filter: Record<string, unknown> = { companyId }
+  if (from || to) {
+    filter.fecha = {}
+    if (from) (filter.fecha as Record<string, string>).$gte = from
+    if (to) (filter.fecha as Record<string, string>).$lte = to
+  }
+  if (userId) filter.userId = userId
+
+  const records = await col.find(filter).project({ _id: 0 }).sort({ fecha: -1 }).limit(500).toArray()
+
+  // Summary
+  const totalHoras = records.reduce((s, r) => s + (r.horasTrabajadas ?? 0), 0)
+  const totalOrdinarias = records.reduce((s, r) => s + (r.horasOrdinarias ?? 0), 0)
+  const totalDominicales = records.reduce((s, r) => s + (r.horasDominicales ?? 0), 0)
+  const totalFestivas = records.reduce((s, r) => s + (r.horasFestivas ?? 0), 0)
+
+  response.json({
+    records,
+    summary: {
+      total: records.length,
+      totalHoras: Math.round(totalHoras * 100) / 100,
+      totalOrdinarias: Math.round(totalOrdinarias * 100) / 100,
+      totalDominicales: Math.round(totalDominicales * 100) / 100,
+      totalFestivas: Math.round(totalFestivas * 100) / 100,
+    },
+  })
 })
