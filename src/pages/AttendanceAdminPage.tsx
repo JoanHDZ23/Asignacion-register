@@ -14,7 +14,7 @@ import { type AccessModule } from '../lib/access'
 import { getCurrentToken, getCurrentUser, setCurrentUser } from '../lib/auth-storage'
 
 type FeedbackState = { kind: 'idle' | 'success' | 'error'; message?: string }
-type ActiveModal = 'employee' | 'position' | 'location' | 'location-edit' | 'location-delete' | 'turn' | 'turn-delete' | null
+type ActiveModal = 'employee' | 'position' | 'location' | 'location-edit' | 'location-delete' | 'turn' | 'turn-delete' | 'turn-edit' | null
 
 const accessModuleLabels: Record<AccessModule, string> = {
   dashboard: 'Inicio',
@@ -172,6 +172,7 @@ export default function AttendanceAdminPage() {
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([])
   const [turnConflicts, setTurnConflicts] = useState<string[]>([])
   const [deletingTurn, setDeletingTurn] = useState<TurnResponse | null>(null)
+  const [editingTurnData, setEditingTurnData] = useState<{ turn: TurnResponse; fecha: string; hora: string; horaFin: string; locationId: string } | null>(null)
 
   const [positionFeedback, setPositionFeedback] = useState<FeedbackState>({ kind: 'idle' })
   const [locationFeedback, setLocationFeedback] = useState<FeedbackState>({ kind: 'idle' })
@@ -664,6 +665,43 @@ export default function AttendanceAdminPage() {
     }
   }
 
+  const openEditTurn = (turn: TurnResponse) => {
+    setEditingTurnData({
+      turn,
+      fecha: turn.fecha,
+      hora: turn.hora ?? '',
+      horaFin: turn.horaFin ?? '',
+      locationId: turn.locationId ?? '',
+    })
+    setActiveModal('turn-edit')
+  }
+
+  const handleUpdateTurnDetails = async () => {
+    if (!token || !editingTurnData) return
+    const { turn, fecha, hora, horaFin, locationId } = editingTurnData
+    const loc = locations.find((l) => l.id === locationId)
+    try {
+      await apiRequest<TurnResponse>(`/turns/${turn.id}/status`, {
+        method: 'PATCH',
+        token,
+        body: { estado: turn.estado },
+      }).catch(() => {}) // silently ignore if status doesn't change
+
+      // Use a general PATCH on the turn
+      await apiRequest<TurnResponse>(`/turns/${turn.id}`, {
+        method: 'PATCH',
+        token,
+        body: { fecha, hora, horaFin, locationId, locationNombre: loc?.nombre },
+      })
+      setTurnFeedback({ kind: 'success', message: `Turno "${turn.titulo}" actualizado correctamente.` })
+      setActiveModal(null)
+      setEditingTurnData(null)
+      await loadAdminData()
+    } catch (err) {
+      setTurnFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error al actualizar el turno.' })
+    }
+  }
+
   const toggleWorker = (id: string) => {
     const next = selectedWorkerIds.includes(id)
       ? selectedWorkerIds.filter((w) => w !== id)
@@ -928,6 +966,12 @@ export default function AttendanceAdminPage() {
                         </table>
                         {/* Botón agregar empleado al turno */}
                         <div className="grouped-turn-card__add">
+                          {currentUser?.role === 'admin' && (
+                            <Button type="button" size="sm" variant="ghost"
+                              onClick={() => openEditTurn(group.empleados[0]?.turnObj as TurnResponse)}>
+                              <Icon name="icon-clipboard" size={13} /> Editar turno
+                            </Button>
+                          )}
                           <Button type="button" size="sm" variant="ghost"
                             onClick={() => setAddingToGroup(group.key === addingToGroup ? null : group.key)}>
                             <Icon name="icon-plus" size={13} /> Agregar empleado
@@ -1397,6 +1441,52 @@ export default function AttendanceAdminPage() {
             <Icon name="icon-x-circle" size={16} /> Eliminar turno
           </Button>
         </div>
+      </Modal>
+
+      {/* Modal: Editar turno */}
+      <Modal
+        open={activeModal === 'turn-edit'}
+        title={`Editar turno: ${editingTurnData?.turn.titulo ?? ''}`}
+        description="Modifica fecha, horario o ubicacion del turno."
+        onClose={() => { setEditingTurnData(null); setActiveModal(null) }}
+      >
+        {editingTurnData && (
+          <div className="turn-form">
+            <div className="turn-form__fields">
+              <label className="turn-form__field">
+                <span>Fecha</span>
+                <input type="date" value={editingTurnData.fecha}
+                  onChange={(e) => setEditingTurnData({ ...editingTurnData, fecha: e.target.value })} />
+              </label>
+              <label className="turn-form__field">
+                <span>Hora inicio</span>
+                <input type="time" value={editingTurnData.hora}
+                  onChange={(e) => setEditingTurnData({ ...editingTurnData, hora: e.target.value })} />
+              </label>
+              <label className="turn-form__field">
+                <span>Hora fin</span>
+                <input type="time" value={editingTurnData.horaFin}
+                  onChange={(e) => setEditingTurnData({ ...editingTurnData, horaFin: e.target.value })} />
+              </label>
+              <label className="turn-form__field turn-form__field--full">
+                <span>Ubicacion</span>
+                <select value={editingTurnData.locationId}
+                  onChange={(e) => setEditingTurnData({ ...editingTurnData, locationId: e.target.value })}>
+                  <option value="">Sin ubicacion</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.nombre}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="confirm-actions" style={{ marginTop: '1rem' }}>
+              <Button type="button" variant="ghost" onClick={() => { setEditingTurnData(null); setActiveModal(null) }}>Cancelar</Button>
+              <Button type="button" variant="primary" onClick={() => void handleUpdateTurnDetails()}>
+                <Icon name="icon-check" size={16} /> Guardar cambios
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )
