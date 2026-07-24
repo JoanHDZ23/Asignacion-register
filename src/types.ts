@@ -195,6 +195,15 @@ export type User = {
   createdAt: string
 }
 
+export type TurnNovedad = {
+  id: string
+  tipo: 'ingreso' | 'durante' | 'salida' | 'rechazo'
+  descripcion: string
+  reportadoPor: string                 // userId del supervisor
+  reportadoPorNombre?: string
+  createdAt: string
+}
+
 export type Turn = {
   id: string
   companyId: string
@@ -212,6 +221,10 @@ export type Turn = {
   confirmedDeadline?: string
   confirmHoursLimit?: number          // Horas antes del turno para confirmar (default 4)
   rejectionReason?: string
+  confirmedByUserId?: string          // Supervisor que confirmó
+  confirmedByUserName?: string
+  confirmedAt?: string                // Fecha/hora de confirmación
+  novedades?: TurnNovedad[]           // Reportes de novedades del supervisor
   attendance?: TurnAttendance
   createdAt: string
   updatedAt: string

@@ -174,7 +174,11 @@ turnsRouter.patch('/:turnId/assign', requireRole(['admin']), async (request, res
 
 turnsRouter.patch('/:turnId/status', async (request, response) => {
   const { turnId } = request.params
-  const { estado, rejectionReason } = request.body as { estado?: TurnStatus; rejectionReason?: string }
+  const { estado, rejectionReason, novedad } = request.body as { 
+    estado?: TurnStatus
+    rejectionReason?: string
+    novedad?: string  // Reporte de novedad opcional al confirmar
+  }
 
   if (!estado) {
     response.status(400).json({ message: 'El estado es requerido.' })
@@ -230,13 +234,100 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
   }
 
   turn.estado = estado
+
+  // Confirmación: registra quién confirmó y cuándo
+  if (estado === 'confirmado') {
+    turn.confirmedByUserId = request.authUser!.userId
+    turn.confirmedByUserName = currentUser?.nombreCompleto
+    turn.confirmedAt = new Date().toISOString()
+  }
+
+  // Rechazo: registra motivo y agrega como novedad
   if (estado === 'rechazado' && rejectionReason) {
     turn.rejectionReason = rejectionReason.trim()
+    // Agrega como novedad de tipo rechazo
+    const novedadRechazo = {
+      id: `nov-${Date.now()}`,
+      tipo: 'rechazo' as const,
+      descripcion: rejectionReason.trim(),
+      reportadoPor: request.authUser!.userId,
+      reportadoPorNombre: currentUser?.nombreCompleto,
+      createdAt: new Date().toISOString(),
+    }
+    turn.novedades = [...(turn.novedades ?? []), novedadRechazo]
   }
+
+  // Novedad opcional al confirmar (reporte de observaciones)
+  if (novedad && novedad.trim()) {
+    const novedadRecord = {
+      id: `nov-${Date.now()}`,
+      tipo: (estado === 'confirmado' ? 'ingreso' : 'durante') as 'ingreso' | 'durante' | 'salida' | 'rechazo',
+      descripcion: novedad.trim(),
+      reportadoPor: request.authUser!.userId,
+      reportadoPorNombre: currentUser?.nombreCompleto,
+      createdAt: new Date().toISOString(),
+    }
+    turn.novedades = [...(turn.novedades ?? []), novedadRecord]
+  }
+
   turn.updatedAt = new Date().toISOString()
   await updateTurn(turn)
 
   response.json(turn)
+})
+
+/**
+ * POST /turns/:turnId/novedades
+ * Permite al supervisor agregar un reporte de novedad durante el turno.
+ */
+turnsRouter.post('/:turnId/novedades', async (request, response) => {
+  const { turnId } = request.params
+  const { descripcion, tipo } = request.body as { descripcion?: string; tipo?: string }
+
+  if (!descripcion || !descripcion.trim()) {
+    response.status(400).json({ message: 'La descripción de la novedad es requerida.' })
+    return
+  }
+
+  const db = await readDatabase()
+  const currentUser = db.users.find((item) => item.id === request.authUser!.userId)
+  const companyId = resolveCompanyIdForUser(db, currentUser)
+  const role = request.authUser!.role
+
+  const isSupervisorByRole = role === 'supervisor' || role === 'admin'
+    || (currentUser?.cargo?.toLowerCase().includes('supervisor'))
+
+  if (!isSupervisorByRole) {
+    response.status(403).json({ message: 'Solo supervisores y administradores pueden reportar novedades.' })
+    return
+  }
+
+  const turn = db.turns.find(
+    (item) => item.id === turnId && item.companyId === companyId,
+  )
+
+  if (!turn) {
+    response.status(404).json({ message: 'Turno no encontrado.' })
+    return
+  }
+
+  const validTipos = ['ingreso', 'durante', 'salida', 'rechazo'] as const
+  const tipoNovedad = validTipos.includes(tipo as any) ? (tipo as typeof validTipos[number]) : 'durante'
+
+  const novedad = {
+    id: `nov-${Date.now()}`,
+    tipo: tipoNovedad,
+    descripcion: descripcion.trim(),
+    reportadoPor: request.authUser!.userId,
+    reportadoPorNombre: currentUser?.nombreCompleto,
+    createdAt: new Date().toISOString(),
+  }
+
+  turn.novedades = [...(turn.novedades ?? []), novedad]
+  turn.updatedAt = new Date().toISOString()
+  await updateTurn(turn)
+
+  response.json({ message: 'Novedad registrada.', novedad, turn })
 })
 
 /**
