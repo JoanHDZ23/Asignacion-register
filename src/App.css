@@ -1487,3 +1487,19 @@ button, input, textarea, select { font: inherit; }
   .grouped-turn-card__stats { justify-self: flex-start; }
   .grouped-turn-card__actions-header { justify-self: flex-end; }
 }
+
+/* ─── Agregar empleado al turno (inline) ─────────────────── */
+.grouped-turn-card__add {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .6rem;
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--clr-border);
+}
+.add-employee-inline {
+  display: flex; align-items: center; gap: .5rem; flex: 1; flex-wrap: wrap;
+}
+.add-employee-inline select {
+  flex: 1; min-width: 200px;
+  border: 1px solid var(--clr-border); border-radius: var(--radius);
+  padding: .55rem .75rem; background: var(--clr-bg); color: var(--clr-text);
+  font: inherit; font-size: 13px;
+}

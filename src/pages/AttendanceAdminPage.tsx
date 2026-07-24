@@ -339,6 +339,34 @@ export default function AttendanceAdminPage() {
   }, [attendanceRows, locations])
 
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
+  const [addingToGroup, setAddingToGroup] = useState<string | null>(null)
+  const [addEmployeeId, setAddEmployeeId] = useState('')
+  const [addingEmployee, setAddingEmployee] = useState(false)
+
+  const handleAddEmployee = async (group: typeof groupedTurns[0]) => {
+    if (!token || !addEmployeeId) return
+    setAddingEmployee(true)
+    try {
+      await apiRequest<unknown>('/operations/turns/add-employee', {
+        method: 'POST', token,
+        body: {
+          userId: addEmployeeId,
+          fecha: group.fecha,
+          hora: group.hora,
+          horaFin: group.horaFin || undefined,
+          locationId: group.locationId,
+          titulo: group.titulo,
+        },
+      })
+      setAddEmployeeId('')
+      setAddingToGroup(null)
+      await loadAdminData()
+    } catch (err) {
+      setTurnFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'No se pudo agregar el empleado.' })
+    } finally {
+      setAddingEmployee(false)
+    }
+  }
 
   const metrics = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
@@ -818,6 +846,33 @@ export default function AttendanceAdminPage() {
                             ))}
                           </tbody>
                         </table>
+                        {/* Botón agregar empleado al turno */}
+                        <div className="grouped-turn-card__add">
+                          <Button type="button" size="sm" variant="ghost"
+                            onClick={() => setAddingToGroup(group.key === addingToGroup ? null : group.key)}>
+                            <Icon name="icon-plus" size={13} /> Agregar empleado
+                          </Button>
+                          {addingToGroup === group.key && (
+                            <div className="add-employee-inline">
+                              <select
+                                value={addEmployeeId}
+                                onChange={(e) => setAddEmployeeId(e.target.value)}
+                                className="att-filter select"
+                              >
+                                <option value="">Selecciona un empleado</option>
+                                {workers
+                                  .filter((w) => !group.empleados.some((e) => e.workerId === w.id))
+                                  .map((w) => <option key={w.id} value={w.id}>{w.nombreCompleto} — {w.cargo}</option>)
+                                }
+                              </select>
+                              <Button type="button" size="sm" variant="primary"
+                                disabled={!addEmployeeId || addingEmployee}
+                                onClick={() => void handleAddEmployee(group)}>
+                                {addingEmployee ? 'Agregando...' : 'Confirmar'}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </article>
