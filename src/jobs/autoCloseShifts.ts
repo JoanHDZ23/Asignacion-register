@@ -86,19 +86,8 @@ export async function runAutoCloseShifts() {
     }
 
     // ── Auto-rechazo: turnos asignados cuyo deadline ya pasó sin confirmación
-    if (
-      turn.estado === 'asignado' &&
-      turn.confirmedDeadline
-    ) {
-      const deadlineMs = new Date(turn.confirmedDeadline).getTime()
-      if (now > deadlineMs) {
-        turn.estado = 'rechazado'
-        turn.rejectionReason = 'No confirmado antes del plazo límite (auto-rechazo del sistema).'
-        turn.updatedAt = new Date().toISOString()
-        await updateTurn(turn)
-        rejectedCount++
-      }
-    }
+    // NOTA: Deshabilitado — el empleado puede marcar entrada sin importar el deadline.
+    // El deadline es solo informativo. El auto-close por horaFin sigue activo.
   }
 
   if (closedCount > 0 || rejectedCount > 0) {

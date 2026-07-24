@@ -265,9 +265,9 @@ authRouter.post('/member-invitations/:token/complete', async (request, response)
     createdAt: new Date().toISOString(),
   })
 
-  invitation.status = 'completada'
+  // El link sigue activo (pendiente) hasta que expire — permite múltiples registros
+  // Solo registra el último usuario que lo usó
   invitation.invitedUserId = user.id
-  invitation.completedAt = new Date().toISOString()
   await updateUserInvitation(invitation)
 
   response.status(201).json({
