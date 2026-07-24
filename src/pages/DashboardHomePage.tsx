@@ -21,9 +21,13 @@ export default function DashboardHomePage() {
     ? currentUser.allowedModules
     : getDefaultAllowedModules(currentUser?.role ?? 'operativo')
 
-  // Permisos derivados
-  const hasGestion       = isAdmin || allowedModules.includes('geolocalizacion')
-  const hasAsignacion    = allowedModules.includes('turnos-fijos')
+  // Permisos derivados — funciona para empresa Y academia
+  const hasGestion = isAdmin || allowedModules.some((m) =>
+    ['geolocalizacion', 'porcentaje-asistencia', 'facturacion', 'asistencia-docente', 'alertas-inasistencia'].includes(m)
+  )
+  const hasAsignacion = allowedModules.some((m) =>
+    ['turnos-fijos', 'turnos-rotativos', 'asistencia-clase', 'codigo-qr', 'asistencia-docente'].includes(m)
+  )
 
   useEffect(() => {
     const token = getCurrentToken()
@@ -95,29 +99,33 @@ export default function DashboardHomePage() {
   }, [company?.nombre, management?.users, turns, hasGestion, hasAsignacion])
 
   const quickAccessItems = useMemo(
-    () =>
-      [
+    () => {
+      // Detecta si es academia por los módulos (sin necesitar la empresa)
+      const isAcademia = allowedModules.some((m) => ['asistencia-clase', 'codigo-qr', 'asistencia-docente'].includes(m))
+
+      return [
         hasAsignacion
           ? {
               to: '/dashboard/asignacion-turnos',
-              title: 'Asignacion de turnos',
-              description: 'Consulta turnos por fecha, estado y responsable.',
-              accent: 'violet',
+              title: isAcademia ? 'Asistencia de clases' : 'Asignacion de turnos',
+              description: isAcademia ? 'Gestiona la asistencia por clase y horario.' : 'Consulta turnos por fecha, estado y responsable.',
+              accent: 'violet' as const,
             }
           : null,
         hasGestion
           ? {
               to: '/dashboard/gestion-asistencia',
-              title: 'Gestion de asistencia',
-              description: 'Registra y verifica entradas y salidas del personal.',
-              accent: 'green',
+              title: isAcademia ? 'Control académico' : 'Gestion de asistencia',
+              description: isAcademia ? 'Porcentaje de faltas, justificaciones y alertas.' : 'Registra y verifica entradas y salidas.',
+              accent: 'green' as const,
             }
           : null,
       ].filter(
         (item): item is { to: string; title: string; description: string; accent: 'violet' | 'green' } =>
           Boolean(item),
-      ),
-    [hasAsignacion, hasGestion],
+      )
+    },
+    [hasAsignacion, hasGestion, allowedModules],
   )
 
   const upcomingTurns = useMemo(() => {

@@ -204,6 +204,11 @@ export default function TurnAssignmentsPage() {
   const canManageTurns = isAdmin || isSupervisor
   const currentUserId = currentUser?.id
 
+  // Detecta tipo academia por los módulos del usuario
+  const isAcademia = currentUser?.allowedModules?.some((m) =>
+    ['asistencia-clase', 'codigo-qr', 'asistencia-docente'].includes(m)
+  ) ?? false
+
   const [turns, setTurns] = useState<TurnAssignment[]>([])
   const [workers, setWorkers] = useState<UserResponse[]>([])
   const [locations, setLocations] = useState<LocationResponse[]>([])
@@ -722,11 +727,13 @@ export default function TurnAssignmentsPage() {
     <div className="dashboard-page">
       <section className="page-header">
         <div>
-          <h1>{canManageTurns ? 'Asignacion de turnos' : 'Mis turnos'}</h1>
+          <h1>{canManageTurns
+            ? (isAcademia ? 'Gestion de clases' : 'Asignacion de turnos')
+            : (isAcademia ? 'Mi asistencia' : 'Mis turnos')}</h1>
           <p className="page-subtitle">
-            {isAdmin ? 'Programa y administra los turnos de los empleados de tu empresa.'
+            {isAdmin ? (isAcademia ? 'Gestiona horarios, clases y asistencia de la institución.' : 'Programa y administra los turnos de los empleados de tu empresa.')
               : isSupervisor ? `Turnos de tu punto operativo · ${operationTurns.length} asignados`
-              : 'Consulta tus turnos, marca asistencia y revisa tus horas.'}
+              : (isAcademia ? 'Consulta tus clases y registra asistencia.' : 'Consulta tus turnos, marca asistencia y revisa tus horas.')}
           </p>
         </div>
         {isAdmin ? (
