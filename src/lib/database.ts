@@ -103,15 +103,15 @@ export async function uploadFacialPhoto(params: {
 export async function readDatabase(): Promise<DatabaseSchema> {
   const [companies, users, positions, locations, turns, userInvitations, horasTurno, facturas, groups] =
     await Promise.all([
-      getCompaniesCollection().then((c) => c.find().toArray()),
-      getUsersCollection().then((c) => c.find().toArray()),
-      getPositionsCollection().then((c) => c.find().toArray()),
-      getLocationsCollection().then((c) => c.find().toArray()),
-      getTurnsCollection().then((c) => c.find().toArray()),
-      getUserInvitationsCollection().then((c) => c.find().toArray()),
-      getHorasTurnoCollection().then((c) => c.find().toArray()),
-      getFacturasCollection().then((c) => c.find().toArray()),
-      getGroupsCollection().then((c) => c.find().toArray()),
+      getCompaniesCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getUsersCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getPositionsCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getLocationsCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getTurnsCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getUserInvitationsCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getHorasTurnoCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getFacturasCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
+      getGroupsCollection().then((c) => c.find().project({ _id: 0 }).toArray()),
     ])
 
   return { companies, users, positions, locations, turns, userInvitations, horasTurno, facturas, groups } as DatabaseSchema
@@ -126,7 +126,7 @@ export async function writeDatabase(_data: DatabaseSchema) {
 export async function createCompany(company: Omit<Company, 'id'>) {
   const col = await getCompaniesCollection()
   const doc: Company = { id: `company-${Date.now()}`, ...company }
-  await col.insertOne(doc as any)
+  await col.insertOne({ ...doc } as any)
   return doc
 }
 
@@ -145,7 +145,7 @@ export async function createUser(user: Omit<User, 'id'>) {
     biometric: normalizeUserBiometricProfile(user as User),
     ...user,
   }
-  await col.insertOne(doc as any)
+  await col.insertOne({ ...doc } as any)
   return doc
 }
 
@@ -179,7 +179,7 @@ export async function createPosition(position: Omit<Position, 'id'>) {
     ...position,
     permissions: position.permissions?.length ? position.permissions : defaultPositionPermissions,
   }
-  await col.insertOne(doc as any)
+  await col.insertOne({ ...doc } as any)
   return doc
 }
 
@@ -194,7 +194,7 @@ export async function updatePosition(position: Position) {
 export async function createLocation(location: Omit<Location, 'id'>) {
   const col = await getLocationsCollection()
   const doc: Location = { id: `location-${Date.now()}`, ...location }
-  await col.insertOne(doc as any)
+  await col.insertOne({ ...doc } as any)
   return doc
 }
 
@@ -214,7 +214,7 @@ export async function deleteLocation(locationId: string, _companyId: string) {
 export async function createTurn(turn: Omit<Turn, 'id'>) {
   const col = await getTurnsCollection()
   const doc: Turn = { id: `turn-${Date.now()}`, ...turn }
-  await col.insertOne(doc as any)
+  await col.insertOne({ ...doc } as any)
   return doc
 }
 
@@ -242,7 +242,7 @@ export async function createUserInvitation(
     createdAt: new Date().toISOString(),
     ...invitation,
   }
-  await col.insertOne(doc as any)
+  await col.insertOne({ ...doc } as any)
   return doc
 }
 

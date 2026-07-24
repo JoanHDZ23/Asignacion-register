@@ -13,131 +13,161 @@ import type { CompanyType } from '../types.js'
 export const authRouter = Router()
 
 authRouter.post('/register-company', async (request, response) => {
-  const {
-    empresa,
-    nit,
-    correoEmpresa,
-    telefonoEmpresa,
-    direccionEmpresa,
-    ciudadEmpresa,
-    tipo,
-    adminNombreCompleto,
-    adminCorreo,
-    adminTelefono,
-    adminTipoDocumento,
-    adminNumeroDocumento,
-  } = request.body ?? {}
+  try {
+    const {
+      empresa,
+      nit,
+      correoEmpresa,
+      telefonoEmpresa,
+      direccionEmpresa,
+      ciudadEmpresa,
+      tipo,
+      adminNombreCompleto,
+      adminCorreo,
+      adminTelefono,
+      adminTipoDocumento,
+      adminNumeroDocumento,
+    } = request.body ?? {}
 
-  if (
-    !empresa ||
-    !nit ||
-    !correoEmpresa ||
-    !adminNombreCompleto ||
-    !adminCorreo ||
-    !adminTelefono ||
-    !adminTipoDocumento ||
-    !adminNumeroDocumento
-  ) {
-    response.status(400).json({ message: 'Faltan datos para registrar la empresa.' })
-    return
+    if (
+      !empresa ||
+      !nit ||
+      !correoEmpresa ||
+      !adminNombreCompleto ||
+      !adminCorreo ||
+      !adminTelefono ||
+      !adminTipoDocumento ||
+      !adminNumeroDocumento
+    ) {
+      response.status(400).json({ message: 'Faltan datos para registrar la empresa.' })
+      return
+    }
+
+    const companyType: CompanyType = tipo === 'academia' ? 'academia' : 'empresa'
+
+    const db = await readDatabase()
+    const duplicatedCompany = db.companies.find(
+      (company) => company.nit === nit || company.correo === correoEmpresa,
+    )
+
+    if (duplicatedCompany) {
+      response.status(409).json({ message: 'La empresa ya existe.' })
+      return
+    }
+
+    const duplicatedAdmin = db.users.find(
+      (user) =>
+        user.correo === adminCorreo ||
+        user.numeroDocumento === adminNumeroDocumento,
+    )
+
+    if (duplicatedAdmin) {
+      response.status(409).json({ message: 'El usuario administrador ya existe.' })
+      return
+    }
+
+    const company = await createCompany({
+      nombre: empresa,
+      nit,
+      correo: correoEmpresa,
+      telefono: telefonoEmpresa,
+      direccion: direccionEmpresa,
+      ciudad: ciudadEmpresa,
+      tipo: companyType,
+      enabledModules: getDefaultModulesByType(companyType),
+      settings: getDefaultSettings(companyType),
+      createdAt: new Date().toISOString(),
+    })
+
+    const adminUser = await createUser({
+      companyId: company.id,
+      nombreCompleto: adminNombreCompleto,
+      tipoDocumento: adminTipoDocumento,
+      numeroDocumento: adminNumeroDocumento,
+      correo: adminCorreo,
+      telefono: adminTelefono,
+      cargo: 'Administrador principal',
+      role: 'admin',
+      activa: true,
+      createdAt: new Date().toISOString(),
+    })
+
+    response.status(201).json({
+      message: 'Empresa y administrador creados correctamente.',
+      company,
+      admin: {
+        id: adminUser.id,
+        nombreCompleto: adminUser.nombreCompleto,
+        correo: adminUser.correo,
+        role: adminUser.role,
+      },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error desconocido'
+    console.error('[register-company] Error:', message)
+
+    if (message.includes('Server selection timed out') || message.includes('ECONNREFUSED') || message.includes('ETIMEDOUT')) {
+      response.status(503).json({
+        message: 'No se puede conectar a la base de datos. Verifica que MongoDB Atlas tenga la IP de Render en Network Access (0.0.0.0/0).',
+        detail: message,
+      })
+      return
+    }
+
+    response.status(500).json({ message: 'Error interno al registrar empresa.', detail: message })
   }
-
-  const companyType: CompanyType = tipo === 'academia' ? 'academia' : 'empresa'
-
-  const db = await readDatabase()
-  const duplicatedCompany = db.companies.find(
-    (company) => company.nit === nit || company.correo === correoEmpresa,
-  )
-
-  if (duplicatedCompany) {
-    response.status(409).json({ message: 'La empresa ya existe.' })
-    return
-  }
-
-  const duplicatedAdmin = db.users.find(
-    (user) =>
-      user.correo === adminCorreo ||
-      user.numeroDocumento === adminNumeroDocumento,
-  )
-
-  if (duplicatedAdmin) {
-    response.status(409).json({ message: 'El usuario administrador ya existe.' })
-    return
-  }
-
-  const company = await createCompany({
-    nombre: empresa,
-    nit,
-    correo: correoEmpresa,
-    telefono: telefonoEmpresa,
-    direccion: direccionEmpresa,
-    ciudad: ciudadEmpresa,
-    tipo: companyType,
-    enabledModules: getDefaultModulesByType(companyType),
-    settings: getDefaultSettings(companyType),
-    createdAt: new Date().toISOString(),
-  })
-
-  const adminUser = await createUser({
-    companyId: company.id,
-    nombreCompleto: adminNombreCompleto,
-    tipoDocumento: adminTipoDocumento,
-    numeroDocumento: adminNumeroDocumento,
-    correo: adminCorreo,
-    telefono: adminTelefono,
-    cargo: 'Administrador principal',
-    role: 'admin',
-    activa: true,
-    createdAt: new Date().toISOString(),
-  })
-
-  response.status(201).json({
-    message: 'Empresa y administrador creados correctamente.',
-    company,
-    admin: {
-      id: adminUser.id,
-      nombreCompleto: adminUser.nombreCompleto,
-      correo: adminUser.correo,
-      role: adminUser.role,
-    },
-  })
 })
 
 authRouter.post('/login', async (request, response) => {
-  const { numeroDocumento } = request.body ?? {}
+  try {
+    const { numeroDocumento } = request.body ?? {}
 
-  if (!numeroDocumento) {
-    response.status(400).json({ message: 'El numero de documento es requerido.' })
-    return
-  }
+    if (!numeroDocumento) {
+      response.status(400).json({ message: 'El numero de documento es requerido.' })
+      return
+    }
 
-  const db = await readDatabase()
-  const user = db.users.find((candidate) => candidate.numeroDocumento === numeroDocumento)
+    const db = await readDatabase()
+    const user = db.users.find((candidate) => candidate.numeroDocumento === numeroDocumento)
 
-  if (!user || !user.activa) {
-    response.status(401).json({ message: 'Documento no autorizado.' })
-    return
-  }
+    if (!user || !user.activa) {
+      response.status(401).json({ message: 'Documento no autorizado.' })
+      return
+    }
 
-  const token = signToken({
-    userId: user.id,
-    companyId: user.companyId,
-    role: user.role,
-  })
-
-  response.json({
-    token,
-    user: {
-      id: user.id,
+    const token = signToken({
+      userId: user.id,
       companyId: user.companyId,
-      nombreCompleto: user.nombreCompleto,
-      correo: user.correo,
-      cargo: user.cargo,
       role: user.role,
-      positionId: user.positionId,
-      allowedModules: resolveAllowedModules(db, user),
-    },
-  })
+    })
+
+    response.json({
+      token,
+      user: {
+        id: user.id,
+        companyId: user.companyId,
+        nombreCompleto: user.nombreCompleto,
+        correo: user.correo,
+        cargo: user.cargo,
+        role: user.role,
+        positionId: user.positionId,
+        allowedModules: resolveAllowedModules(db, user),
+      },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error desconocido'
+    console.error('[login] Error:', message)
+
+    if (message.includes('Server selection timed out') || message.includes('ECONNREFUSED') || message.includes('ETIMEDOUT')) {
+      response.status(503).json({
+        message: 'No se puede conectar a la base de datos.',
+        detail: message,
+      })
+      return
+    }
+
+    response.status(500).json({ message: 'Error interno al iniciar sesión.', detail: message })
+  }
 })
 
 authRouter.get('/member-invitations/:token', async (request, response) => {

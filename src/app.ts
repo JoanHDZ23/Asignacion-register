@@ -17,7 +17,7 @@ import { usersRouter } from './routes/users.js'
 export const app = express()
 
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))
 
 app.get('/health', (_request, response) => {
   response.json({ status: 'ok' })
@@ -44,6 +44,22 @@ app.use(
     response: express.Response,
     _next: express.NextFunction,
   ) => {
+    console.error('[error-handler]', error.message)
+
+    // Error de conexión a MongoDB
+    if (
+      error.message.includes('ECONNREFUSED') ||
+      error.message.includes('Server selection timed out') ||
+      error.message.includes('connect ETIMEDOUT') ||
+      error.message.includes('MongoServerSelectionError')
+    ) {
+      response.status(503).json({
+        message: 'Base de datos no disponible. Verifica la conexión a MongoDB Atlas.',
+        detail: error.message,
+      })
+      return
+    }
+
     response.status(500).json({
       message: 'Error interno del servidor.',
       detail: error.message,

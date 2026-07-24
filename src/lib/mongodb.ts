@@ -18,28 +18,45 @@ const DB_NAME = process.env.MONGODB_DB_NAME ?? 'ommex_register'
 
 let client: MongoClient | null = null
 let db: Db | null = null
+let connecting: Promise<Db> | null = null
 
 /**
  * Conecta a MongoDB Atlas y devuelve la instancia de la DB.
- * Reutiliza la conexión si ya existe.
+ * Reutiliza la conexión si ya existe. Serializa intentos concurrentes.
  */
 export async function connectMongo(): Promise<Db> {
   if (db) return db
 
-  try {
-    client = new MongoClient(MONGODB_URI)
-    await client.connect()
-    db = client.db(DB_NAME)
-    console.log(`[MongoDB] Conectado a ${DB_NAME}`)
+  // Evita múltiples intentos de conexión simultáneos
+  if (connecting) return connecting
 
-    // Crea índices para optimizar consultas frecuentes
-    await createIndexes(db)
+  connecting = (async () => {
+    try {
+      client = new MongoClient(MONGODB_URI, {
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+      })
+      await client.connect()
+      db = client.db(DB_NAME)
+      console.log(`[MongoDB] Conectado a ${DB_NAME}`)
 
-    return db
-  } catch (error) {
-    console.error('[MongoDB] Error de conexión:', error)
-    throw error
-  }
+      // Crea índices para optimizar consultas frecuentes
+      await createIndexes(db)
+
+      return db
+    } catch (error) {
+      console.error('[MongoDB] Error de conexión:', error)
+      // Reset para permitir reintentos
+      client = null
+      db = null
+      throw error
+    } finally {
+      connecting = null
+    }
+  })()
+
+  return connecting
 }
 
 /**
