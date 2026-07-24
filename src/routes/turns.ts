@@ -131,6 +131,57 @@ turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
   response.status(201).json(turn)
 })
 
+/**
+ * PATCH /turns/:turnId — Editar datos del turno (fecha, hora, ubicación)
+ */
+turnsRouter.patch('/:turnId', requireRole(['admin']), async (request, response) => {
+  const { turnId } = request.params
+  const { fecha, hora, horaFin, locationId, locationNombre, descripcion } = request.body ?? {}
+
+  const db = await readDatabase()
+  const currentUser = db.users.find((item) => item.id === request.authUser!.userId)
+  const companyId = resolveCompanyIdForUser(db, currentUser)
+  const turn = db.turns.find(
+    (item) => item.id === turnId && item.companyId === companyId,
+  )
+
+  if (!turn) {
+    response.status(404).json({ message: 'Turno no encontrado.' })
+    return
+  }
+
+  // No permite editar turnos ya finalizados
+  if (turn.estado === 'finalizado') {
+    response.status(409).json({ message: 'No se puede editar un turno finalizado.' })
+    return
+  }
+
+  if (fecha) turn.fecha = fecha
+  if (hora) turn.hora = hora
+  if (horaFin !== undefined) turn.horaFin = horaFin || undefined
+  if (locationId) {
+    const location = db.locations.find((l) => l.id === locationId && l.companyId === companyId)
+    if (location) {
+      turn.locationId = locationId
+      turn.locationNombre = location.nombre
+      turn.titulo = location.nombre  // Título auto se actualiza con ubicación
+    }
+  }
+  if (locationNombre) turn.locationNombre = locationNombre
+  if (descripcion !== undefined) turn.descripcion = descripcion
+
+  // Recalcula deadline si cambió la fecha u hora
+  if (fecha || hora) {
+    const hoursLimit = turn.confirmHoursLimit ?? 4
+    turn.confirmedDeadline = buildConfirmedDeadline(turn.fecha, turn.hora, hoursLimit)
+  }
+
+  turn.updatedAt = new Date().toISOString()
+  await updateTurn(turn)
+
+  response.json(turn)
+})
+
 turnsRouter.patch('/:turnId/assign', requireRole(['admin']), async (request, response) => {
   const { turnId } = request.params
   const { assignedToUserId } = request.body ?? {}
