@@ -39,6 +39,8 @@ export type CompanyResponse = {
   telefono?: string
   direccion?: string
   ciudad?: string
+  tipo?: 'empresa' | 'academia'
+  enabledModules?: AccessModule[]
   createdAt: string
 }
 

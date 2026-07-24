@@ -58,6 +58,62 @@ const accessModuleDescriptions: Record<AccessModule, string> = {
   'eventos-talleres': 'Control de actividades extracurriculares.',
 }
 
+// ── Permisos clasificados por nivel de rol (empresa) ─────────────────────
+type PermissionGroup = {
+  title: string
+  description: string
+  tag: string // etiqueta de nivel
+  modules: AccessModule[]
+}
+
+const empresaPermissionGroups: PermissionGroup[] = [
+  {
+    title: 'Operativo',
+    description: 'Permisos básicos para empleados de campo.',
+    tag: 'Empleado',
+    modules: ['dashboard', 'turnos-fijos', 'biometria-facial'],
+  },
+  {
+    title: 'Supervisor',
+    description: 'Control de personal y validación de asistencia.',
+    tag: 'Supervisor',
+    modules: ['geolocalizacion', 'turnos-rotativos', 'permisos-ausencias', 'informes'],
+  },
+  {
+    title: 'Analista / Facturación',
+    description: 'Gestión de horas, recargos y cuentas de cobro.',
+    tag: 'Analista',
+    modules: ['horas-extras-recargos', 'facturacion', 'teletrabajo'],
+  },
+  {
+    title: 'Gerencia / Administración',
+    description: 'Configuración total del sistema.',
+    tag: 'Gerencia',
+    modules: ['configuracion'],
+  },
+]
+
+const academiaPermissionGroups: PermissionGroup[] = [
+  {
+    title: 'Estudiante',
+    description: 'Permisos básicos para alumnos.',
+    tag: 'Estudiante',
+    modules: ['dashboard', 'codigo-qr', 'porcentaje-asistencia', 'justificaciones'],
+  },
+  {
+    title: 'Docente',
+    description: 'Control de asistencia en clases y eventos.',
+    tag: 'Docente',
+    modules: ['asistencia-clase', 'asistencia-docente', 'eventos-talleres'],
+  },
+  {
+    title: 'Coordinación / Admin',
+    description: 'Alertas, informes y configuración institucional.',
+    tag: 'Coordinación',
+    modules: ['alertas-inasistencia', 'informes', 'configuracion'],
+  },
+]
+
 const positionAccessOptions = Object.entries(accessModuleLabels).map(([value, label]) => ({
   value: value as AccessModule,
   label,
@@ -102,6 +158,7 @@ export default function AttendanceAdminPage() {
   const [invitations, setInvitations] = useState<UserInvitationResponse[]>([])
   const [turns, setTurns] = useState<TurnResponse[]>([])
   const [companyName, setCompanyName] = useState('')
+  const [companyType, setCompanyType] = useState<'empresa' | 'academia'>('empresa')
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
   const [editingPosition, setEditingPosition] = useState<PositionResponse | null>(null)
@@ -145,6 +202,7 @@ export default function AttendanceAdminPage() {
         setInvitations(response.invitations)
         setTurns(response.turns)
         if (response.company?.nombre) setCompanyName(response.company.nombre)
+        if (response.company?.tipo) setCompanyType(response.company.tipo)
         if (response.currentUser && currentUser) {
           setCurrentUser({ ...currentUser, companyId: response.currentUser.companyId,
             role: response.currentUser.role, positionId: response.currentUser.positionId,
@@ -1158,18 +1216,29 @@ export default function AttendanceAdminPage() {
         <div className="access-picker">
           <div className="access-picker__header">
             <h4>Permisos de acceso</h4>
-            <p>Define que modulos puede ver este cargo.</p>
+            <p>Define que modulos puede ver este cargo. Clasificados por nivel de responsabilidad.</p>
           </div>
-          <div className="access-picker__grid">
-            {positionAccessOptions.map((opt) => (
-              <button key={opt.value} type="button"
-                className={`access-picker__item${positionPermissions.includes(opt.value) ? ' access-picker__item--on' : ''}`}
-                onClick={() => togglePermission(opt.value)}>
-                <strong>{opt.label}</strong>
-                <span>{opt.description}</span>
-              </button>
-            ))}
-          </div>
+          {(companyType === 'empresa' ? empresaPermissionGroups : academiaPermissionGroups).map((group) => (
+            <div className="access-picker__group" key={group.title}>
+              <div className="access-picker__group-header">
+                <div className="access-picker__group-title">
+                  <strong>{group.title}</strong>
+                  <span className="access-picker__tag">{group.tag}</span>
+                </div>
+                <span className="access-picker__group-desc">{group.description}</span>
+              </div>
+              <div className="access-picker__grid">
+                {group.modules.map((mod) => (
+                  <button key={mod} type="button"
+                    className={`access-picker__item${positionPermissions.includes(mod) ? ' access-picker__item--on' : ''}`}
+                    onClick={() => togglePermission(mod)}>
+                    <strong>{accessModuleLabels[mod]}</strong>
+                    <span>{accessModuleDescriptions[mod]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </Modal>
 
