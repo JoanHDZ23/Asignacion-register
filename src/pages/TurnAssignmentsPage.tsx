@@ -822,30 +822,24 @@ export default function TurnAssignmentsPage() {
                     <div className="biometric-turn-item__actions">
                       <span className={`turn-status turn-status--${turn.estado}`}>{turn.estado.replace('_', ' ')}</span>
 
-                      {/* Ventana de confirmación — solo cuando está dentro de las 4h previas */}
+                      {/* Estado del turno y acciones para el empleado */}
                       {(turn.estado === 'pendiente' || turn.estado === 'asignado') ? (
                         <>
-                          {turn.confirmedDeadline && (
-                            <span className={`confirm-window ${isWithinConfirmWindow(turn.confirmedDeadline) ? 'confirm-window--open' : 'confirm-window--expired'}`}>
-                              {isWithinConfirmWindow(turn.confirmedDeadline)
-                                ? `Confirmar en ${fmtCountdown(minutesUntilDeadline(turn.confirmedDeadline))}`
-                                : `Ventana cerrada · ${fmtCountdown(minutesUntilDeadline(turn.confirmedDeadline))}`}
+                          {turn.confirmedDeadline && isWithinConfirmWindow(turn.confirmedDeadline) && (
+                            <span className="confirm-window confirm-window--open">
+                              Inicia en {fmtCountdown(minutesUntilDeadline(turn.confirmedDeadline))}
                             </span>
                           )}
-                          {isWithinConfirmWindow(turn.confirmedDeadline) ? (
-                            <div className="biometric-turn-item__confirm">
-                              <Button type="button" size="sm" variant="ghost" disabled={statusLoadingId === turn.id}
-                                onClick={() => void handleStatusChange(turn.id, 'confirmado')}>
-                                <Icon name="icon-check-circle" size={13} /> Confirmar
-                              </Button>
-                              <Button type="button" size="sm" variant="ghost" disabled={statusLoadingId === turn.id}
-                                onClick={() => openRejectModal(turn.id)}>
-                                <Icon name="icon-x-circle" size={13} /> Rechazar
-                              </Button>
-                            </div>
-                          ) : (
-                            <p className="confirm-window__msg">El tiempo para confirmar este turno ha vencido. Contacta al administrador.</p>
-                          )}
+                          <div className="biometric-turn-item__confirm">
+                            <Button type="button" size="sm" variant="ghost" disabled={statusLoadingId === turn.id}
+                              onClick={() => void handleStatusChange(turn.id, 'confirmado')}>
+                              <Icon name="icon-check-circle" size={13} /> Confirmar asistencia
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" disabled={statusLoadingId === turn.id}
+                              onClick={() => openRejectModal(turn.id)}>
+                              <Icon name="icon-x-circle" size={13} /> Rechazar
+                            </Button>
+                          </div>
                         </>
                       ) : null}
 
