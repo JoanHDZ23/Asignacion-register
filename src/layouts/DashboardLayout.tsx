@@ -33,27 +33,56 @@ export function DashboardLayout() {
   const [companyName, setCompanyName] = useState('')
 
   const navigationGroups = useMemo(
-    () =>
-      ([
+    () => {
+      // Mapa de módulos → items de navegación
+      type NavItem = { to: string; label: string; icon: 'icon-home' | 'icon-calendar' | 'icon-clipboard' }
+      const moduleNavMap: Record<string, NavItem> = {
+        // Empresa
+        'turnos-fijos':          { to: '/dashboard/asignacion-turnos', label: 'Turnos', icon: 'icon-calendar' },
+        'turnos-rotativos':      { to: '/dashboard/asignacion-turnos', label: 'Turnos', icon: 'icon-calendar' },
+        'geolocalizacion':       { to: '/dashboard/gestion-asistencia', label: 'Gestion de asistencia', icon: 'icon-clipboard' },
+        'facturacion':           { to: '/dashboard/gestion-asistencia', label: 'Facturación', icon: 'icon-clipboard' },
+        // Academia
+        'asistencia-clase':      { to: '/dashboard/asignacion-turnos', label: 'Asistencia', icon: 'icon-calendar' },
+        'asistencia-docente':    { to: '/dashboard/asignacion-turnos', label: 'Asistencia docente', icon: 'icon-calendar' },
+        'codigo-qr':            { to: '/dashboard/asignacion-turnos', label: 'Código QR', icon: 'icon-calendar' },
+        'porcentaje-asistencia': { to: '/dashboard/gestion-asistencia', label: 'Control asistencia', icon: 'icon-clipboard' },
+      }
+
+      // Construye items únicos (sin duplicar rutas)
+      const seenPaths = new Set<string>()
+      const operationItems: NavigationItem[] = []
+
+      for (const mod of allowedModules) {
+        const nav = moduleNavMap[mod]
+        if (nav && !seenPaths.has(nav.to)) {
+          seenPaths.add(nav.to)
+          operationItems.push(nav)
+        }
+      }
+
+      // Admin y supervisor siempre ven ambas vistas
+      if ((isAdmin || isSupervisor) && !seenPaths.has('/dashboard/asignacion-turnos')) {
+        operationItems.unshift({ to: '/dashboard/asignacion-turnos', label: 'Turnos', icon: 'icon-calendar' })
+      }
+      if ((isAdmin || isSupervisor) && !seenPaths.has('/dashboard/gestion-asistencia')) {
+        operationItems.push({ to: '/dashboard/gestion-asistencia', label: 'Gestion', icon: 'icon-clipboard' })
+      }
+
+      return ([
         {
           title: 'General',
           items: allowedModules.includes('dashboard')
-            ? [{ to: '/dashboard', label: 'Inicio', end: true, icon: 'icon-home' }]
+            ? [{ to: '/dashboard', label: 'Inicio', end: true, icon: 'icon-home' as const }]
             : [],
         },
         {
           title: 'Operacion',
-          items: [
-            ...(allowedModules.includes('turnos-fijos')
-              ? [{ to: '/dashboard/asignacion-turnos', label: 'Asignacion de turnos', icon: 'icon-calendar' }]
-              : []),
-            ...(isAdmin || isSupervisor || allowedModules.includes('geolocalizacion')
-              ? [{ to: '/dashboard/gestion-asistencia', label: 'Gestion de asistencia', icon: 'icon-clipboard' }]
-              : []),
-          ],
+          items: operationItems,
         },
-      ] as NavigationGroup[]).filter((group) => group.items.length),
-    [allowedModules, isAdmin],
+      ] as NavigationGroup[]).filter((group) => group.items.length)
+    },
+    [allowedModules, isAdmin, isSupervisor],
   )
 
   const navigationItems = useMemo(
@@ -119,17 +148,22 @@ export function DashboardLayout() {
       .slice(0, 2)
   }, [companyName, user?.companyId])
 
-  // Guard redirect
+  // Guard redirect — solo redirige si la ruta actual no está en las rutas permitidas
   useEffect(() => {
     const currentPath = location.pathname
     const firstAllowedPath = navigationItems[0]?.to ?? '/dashboard'
 
+    // Dashboard siempre accesible si tiene el módulo
     if (currentPath === '/dashboard' && allowedModules.includes('dashboard')) return
-    if (currentPath.includes('/dashboard/asignacion-turnos') && allowedModules.includes('turnos-fijos')) return
-    if (currentPath.includes('/dashboard/gestion-asistencia') && (isAdmin || isSupervisor || allowedModules.includes('geolocalizacion'))) return
+
+    // Si la ruta actual existe en el menú de navegación → permitir
+    if (navigationItems.some((item) => currentPath.includes(item.to))) return
+
+    // Admin y supervisor tienen acceso implícito a todas las rutas del dashboard
+    if (isAdmin || isSupervisor) return
 
     navigate(firstAllowedPath, { replace: true })
-  }, [allowedModules, isAdmin, location.pathname, navigate, navigationItems])
+  }, [allowedModules, isAdmin, isSupervisor, location.pathname, navigate, navigationItems])
 
   // Load company name
   useEffect(() => {
