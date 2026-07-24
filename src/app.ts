@@ -5,6 +5,7 @@ import { openApiDocument } from './lib/openapi.js'
 import { authRouter } from './routes/auth.js'
 import { attendanceRouter } from './routes/attendance.js'
 import { companiesRouter } from './routes/companies.js'
+import { groupsRouter } from './routes/groups.js'
 import { locationsRouter } from './routes/locations.js'
 import { messagesRouter } from './routes/messages.js'
 import { operationsRouter } from './routes/operations.js'
@@ -27,6 +28,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument))
 app.use('/api/auth', authRouter)
 app.use('/api/attendance', attendanceRouter)
 app.use('/api/companies', companiesRouter)
+app.use('/api/groups', groupsRouter)
 app.use('/api/locations', locationsRouter)
 app.use('/api/messages', messagesRouter)
 app.use('/api/operations', operationsRouter)

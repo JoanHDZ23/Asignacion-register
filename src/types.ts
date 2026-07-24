@@ -202,6 +202,26 @@ export type DatabaseSchema = {
   userInvitations: UserInvitation[]
   horasTurno: HorasTurnoRecord[]
   facturas: Factura[]
+  groups: OperationGroup[]
+}
+
+/**
+ * Grupo operativo — agrupa empleados por zona y horario.
+ * Permite crear turnos en bloque y gestionar personal.
+ */
+export type OperationGroup = {
+  id: string
+  companyId: string
+  nombre: string                      // Ej. "Turno Mañana - Bodega Norte"
+  locationId: string                  // Punto de operación
+  locationNombre?: string
+  horario: string                     // HH:MM inicio
+  horarioFin?: string                 // HH:MM fin
+  memberUserIds: string[]             // IDs de empleados del grupo
+  supervisorUserId?: string           // Supervisor asignado al grupo
+  activo: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export type HorasTurnoRecord = {

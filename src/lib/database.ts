@@ -28,6 +28,7 @@ const defaultDatabase: DatabaseSchema = {
   userInvitations: [],
   horasTurno: [],
   facturas: [],
+  groups: [],
 }
 
 const defaultPositionPermissions: AccessModule[] = ['dashboard', 'turnos-fijos']
@@ -148,6 +149,7 @@ async function readLocalDatabase() {
       userInvitations: parsed.userInvitations ?? [],
       horasTurno: parsed.horasTurno ?? [],
       facturas: parsed.facturas ?? [],
+      groups: parsed.groups ?? [],
     }
   } catch {
     return cloneDefaultDatabase()
@@ -726,6 +728,7 @@ export async function readDatabase() {
         userInvitations: localDb.userInvitations,
         horasTurno: localDb.horasTurno,
         facturas: localDb.facturas,
+        groups: localDb.groups,
       }
     }
   } catch (error) {
