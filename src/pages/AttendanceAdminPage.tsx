@@ -168,6 +168,11 @@ export default function AttendanceAdminPage() {
   const [editingLocation, setEditingLocation] = useState<LocationResponse | null>(null)
   const [editingWorker, setEditingWorker] = useState<UserResponse | null>(null)
   const [deletingWorker, setDeletingWorker] = useState<UserResponse | null>(null)
+  const [hoursModalOpen, setHoursModalOpen] = useState(false)
+  const [hoursData, setHoursData] = useState<{ records: any[]; summary: any } | null>(null)
+  const [hoursLoading, setHoursLoading] = useState(false)
+  const [hoursFilterUser, setHoursFilterUser] = useState('')
+  const [hoursRange, setHoursRange] = useState<'15' | '30'>('15')
 
   // Multi-employee turn form state
   const [turnForm, setTurnForm] = useState({
@@ -702,6 +707,30 @@ export default function AttendanceAdminPage() {
     }
   }
 
+  const loadHoursHistory = async (days: '15' | '30', userId?: string) => {
+    if (!token) return
+    setHoursLoading(true)
+    try {
+      const to = new Date().toISOString().slice(0, 10)
+      const fromDate = new Date()
+      fromDate.setDate(fromDate.getDate() - Number(days))
+      const from = fromDate.toISOString().slice(0, 10)
+      const params = new URLSearchParams({ from, to })
+      if (userId) params.set('userId', userId)
+      const result = await apiRequest<{ records: any[]; summary: any }>(`/turns/hours-history?${params.toString()}`, { token })
+      setHoursData(result)
+    } catch {
+      setHoursData({ records: [], summary: { total: 0, totalHoras: 0, totalOrdinarias: 0, totalDominicales: 0, totalFestivas: 0 } })
+    } finally {
+      setHoursLoading(false)
+    }
+  }
+
+  const openHoursModal = () => {
+    setHoursModalOpen(true)
+    void loadHoursHistory(hoursRange, hoursFilterUser || undefined)
+  }
+
   const handleEditWorker = async (values: Record<string, string>) => {
     if (!token || !editingWorker) return
     try {
@@ -921,7 +950,12 @@ export default function AttendanceAdminPage() {
       <div className="pg__section">
         <div className="section-header">
           <h2>Panel de asistencia</h2>
-          <span className="section-header__count">{attendanceRows.length} turno(s){searchQuery ? ` · filtrando "${searchQuery}"` : ''}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+            <span className="section-header__count">{attendanceRows.length} turno(s){searchQuery ? ` · filtrando "${searchQuery}"` : ''}</span>
+            <Button type="button" variant="ghost" size="sm" onClick={openHoursModal}>
+              <Icon name="icon-clock" size={14} /> Historial horas
+            </Button>
+          </div>
         </div>
 
         {/* ── Filtros ─────────────────────────────────────── */}
@@ -1104,6 +1138,9 @@ export default function AttendanceAdminPage() {
           <div className="section-header">
             <h2>Cuenta de cobro</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+              <Button type="button" variant="ghost" size="sm" onClick={openHoursModal}>
+                <Icon name="icon-clock" size={14} /> Historial de horas
+              </Button>
               <span className="section-header__count">
                 {billingRows.length} empleado(s) · <strong>{fmtH(totalBillingHours)}</strong> totales
               </span>
@@ -1562,6 +1599,85 @@ export default function AttendanceAdminPage() {
           <Button type="button" variant="primary" className="btn-danger" onClick={() => void handleDeleteTurn()}>
             <Icon name="icon-x-circle" size={16} /> Eliminar turno
           </Button>
+        </div>
+      </Modal>
+
+      {/* Modal: Historial de horas */}
+      <Modal
+        open={hoursModalOpen}
+        title="Historial de horas trabajadas"
+        description="Detalle de horas por empleado con desglose de recargos."
+        onClose={() => { setHoursModalOpen(false); setHoursData(null) }}
+      >
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <label className="att-filter" style={{ flex: 1, minWidth: 140 }}>
+              <span>Rango</span>
+              <select value={hoursRange} onChange={(e) => { const v = e.target.value as '15' | '30'; setHoursRange(v); void loadHoursHistory(v, hoursFilterUser || undefined) }}>
+                <option value="15">Últimos 15 días</option>
+                <option value="30">Últimos 30 días</option>
+              </select>
+            </label>
+            <label className="att-filter" style={{ flex: 1, minWidth: 140 }}>
+              <span>Empleado</span>
+              <select value={hoursFilterUser} onChange={(e) => { const v = e.target.value; setHoursFilterUser(v); void loadHoursHistory(hoursRange, v || undefined) }}>
+                <option value="">Todos</option>
+                {workers.map((w) => <option key={w.id} value={w.id}>{w.nombreCompleto}</option>)}
+              </select>
+            </label>
+          </div>
+
+          {hoursLoading ? (
+            <p style={{ textAlign: 'center', padding: '1rem', color: 'var(--clr-text-2)' }}>Cargando...</p>
+          ) : hoursData ? (
+            <>
+              {/* Resumen */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '.5rem' }}>
+                <div className="signal-chip"><strong>{hoursData.summary.totalHoras}</strong><span>Horas totales</span></div>
+                <div className="signal-chip"><strong>{hoursData.summary.totalOrdinarias}</strong><span>Ordinarias</span></div>
+                <div className="signal-chip"><strong>{hoursData.summary.totalDominicales}</strong><span>Dominicales</span></div>
+                <div className="signal-chip"><strong>{hoursData.summary.totalFestivas}</strong><span>Festivas</span></div>
+              </div>
+
+              {/* Tabla */}
+              {hoursData.records.length > 0 ? (
+                <div className="table-wrap" style={{ maxHeight: 350, overflow: 'auto' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Empleado</th>
+                        <th>Fecha</th>
+                        <th>Entrada</th>
+                        <th>Salida</th>
+                        <th>Horas</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hoursData.records.map((r: any) => (
+                        <tr key={r.id}>
+                          <td><strong>{r.nombreUsuario}</strong></td>
+                          <td>{r.fecha}</td>
+                          <td>{r.horaEntradaReal ?? '—'}</td>
+                          <td>{r.horaSalidaReal ?? '—'}</td>
+                          <td><span className="hours-badge">{r.horasTrabajadas?.toFixed(1) ?? '0'}h</span></td>
+                          <td>
+                            {r.esFestivo ? <span style={{ color: '#dc2626', fontWeight: 500, fontSize: 12 }}>Festivo</span>
+                              : r.esDominical ? <span style={{ color: '#d97706', fontWeight: 500, fontSize: 12 }}>Dominical</span>
+                              : <span style={{ color: 'var(--clr-text-2)', fontSize: 12 }}>Ordinaria</span>}
+                          </td>
+                          <td><span className={`status-badge status-badge--${r.estadoTurno}`}>{r.estadoTurno}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p style={{ textAlign: 'center', padding: '1rem', color: 'var(--clr-text-2)' }}>Sin registros de horas en este periodo.</p>
+              )}
+            </>
+          ) : null}
         </div>
       </Modal>
 
