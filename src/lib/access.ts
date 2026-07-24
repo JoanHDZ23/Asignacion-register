@@ -1,4 +1,5 @@
 import type { AccessModule, CompanySettings, CompanyType, DatabaseSchema, User } from '../types.js'
+import { defaultPermissionsByRole } from '../types.js'
 
 // ── Módulos por defecto según tipo de gestión ──────────────────────────
 
@@ -55,7 +56,6 @@ export function getDefaultSettings(tipo: CompanyType): CompanySettings {
     }
   }
 
-  // Empresa
   return {
     ...base,
     billingRateDefault: undefined,
@@ -73,28 +73,36 @@ export function resolveCompanyIdForUser(db: DatabaseSchema, user: User | undefin
   return user.companyId || db.users.find((item) => item.id === user.id)?.companyId || ''
 }
 
+/**
+ * Resuelve los módulos permitidos para un usuario según:
+ * 1. Tipo de empresa (empresa vs academia)
+ * 2. Rol del usuario (admin, supervisor, operativo, docente, estudiante)
+ * 3. Permisos específicos del cargo (Position) si están definidos
+ */
 export function resolveAllowedModules(db: DatabaseSchema, user: User): AccessModule[] {
   const company = db.companies.find((c) => c.id === user.companyId)
-  const companyModules = company?.enabledModules ?? empresaModules
+  const companyType = company?.tipo ?? 'empresa'
+  const companyModules = company?.enabledModules ?? getDefaultModulesByType(companyType)
 
+  // Admin: todos los módulos habilitados de la empresa
   if (user.role === 'admin') {
     return companyModules
   }
 
-  if (user.role === 'supervisor' || user.role === 'docente') {
-    // Supervisores y docentes ven módulos operativos sin configuración
-    return companyModules.filter((m) => m !== 'configuracion')
-  }
-
-  // Operativo / estudiante — permisos definidos por su cargo
+  // Permisos específicos del cargo (si están definidos)
   const position = user.positionId
     ? db.positions.find((item) => item.id === user.positionId && item.companyId === user.companyId)
     : undefined
 
   if (position?.permissions?.length) {
-    return position.permissions
+    // Intersección: solo permisos del cargo que la empresa tiene habilitados
+    return position.permissions.filter((m) => companyModules.includes(m))
   }
 
-  // Defaults mínimos
-  return ['dashboard'] satisfies AccessModule[]
+  // Permisos por defecto del rol según tipo de empresa
+  const roleDefaults = defaultPermissionsByRole[user.role]
+  const defaults = companyType === 'academia' ? roleDefaults.academia : roleDefaults.empresa
+
+  // Intersección con módulos habilitados de la empresa
+  return defaults.filter((m) => companyModules.includes(m))
 }

@@ -1,4 +1,42 @@
-export type UserRole = 'admin' | 'supervisor' | 'operativo' | 'docente' | 'estudiante'
+// ── Roles por tipo de gestión ─────────────────────────────────────────────
+
+// Roles disponibles para tipo EMPRESA
+export type EmpresaRole = 'admin' | 'supervisor' | 'operativo'
+
+// Roles disponibles para tipo ACADEMIA
+export type AcademiaRole = 'admin' | 'docente' | 'estudiante'
+
+export type UserRole = EmpresaRole | AcademiaRole
+
+// Roles permitidos según tipo de empresa — para validación en backend
+export const rolesByCompanyType = {
+  empresa:  ['admin', 'supervisor', 'operativo'] as UserRole[],
+  academia: ['admin', 'docente', 'estudiante'] as UserRole[],
+}
+
+// Permisos por defecto según rol y tipo de empresa
+export const defaultPermissionsByRole: Record<UserRole, { empresa: AccessModule[]; academia: AccessModule[] }> = {
+  admin: {
+    empresa: ['dashboard', 'turnos-fijos', 'turnos-rotativos', 'horas-extras-recargos', 'geolocalizacion', 'permisos-ausencias', 'biometria-facial', 'teletrabajo', 'facturacion', 'informes', 'configuracion'],
+    academia: ['dashboard', 'asistencia-clase', 'codigo-qr', 'asistencia-docente', 'porcentaje-asistencia', 'justificaciones', 'alertas-inasistencia', 'eventos-talleres', 'informes', 'configuracion'],
+  },
+  supervisor: {
+    empresa: ['dashboard', 'turnos-fijos', 'geolocalizacion', 'biometria-facial', 'informes'],
+    academia: ['dashboard', 'asistencia-clase', 'asistencia-docente', 'informes'],
+  },
+  operativo: {
+    empresa: ['dashboard', 'turnos-fijos'],
+    academia: ['dashboard'],
+  },
+  docente: {
+    empresa: ['dashboard'],
+    academia: ['dashboard', 'asistencia-clase', 'codigo-qr', 'porcentaje-asistencia', 'justificaciones', 'eventos-talleres'],
+  },
+  estudiante: {
+    empresa: ['dashboard'],
+    academia: ['dashboard', 'codigo-qr', 'porcentaje-asistencia', 'justificaciones'],
+  },
+}
 export type TurnStatus = 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado'
 export type InvitationStatus = 'pendiente' | 'completada' | 'cancelada'
 export type AttendanceAction = 'entrada' | 'salida'

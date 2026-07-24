@@ -109,9 +109,22 @@ settingsRouter.get('/modules-available', async (request, response) => {
     { id: 'configuracion', label: 'Configuración', description: 'Materias, horarios, sedes.' },
   ]
 
+  const availableRoles = company.tipo === 'academia'
+    ? [
+        { id: 'admin', label: 'Administrador', description: 'Acceso total a la plataforma.' },
+        { id: 'docente', label: 'Docente', description: 'Gestiona asistencia de clases y calificaciones.' },
+        { id: 'estudiante', label: 'Estudiante', description: 'Registra asistencia y consulta su estado.' },
+      ]
+    : [
+        { id: 'admin', label: 'Administrador', description: 'Acceso total a la plataforma.' },
+        { id: 'supervisor', label: 'Supervisor', description: 'Confirma asistencia del equipo operativo.' },
+        { id: 'operativo', label: 'Operativo', description: 'Marca asistencia y consulta sus turnos.' },
+      ]
+
   response.json({
     tipo: company.tipo,
     modules: company.tipo === 'academia' ? academiaModules : empresaModules,
     enabled: company.enabledModules,
+    roles: availableRoles,
   })
 })

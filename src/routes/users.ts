@@ -63,7 +63,14 @@ usersRouter.post('/invitations', async (request, response) => {
     return
   }
 
-  const resolvedRole = role === 'admin' ? 'admin' : role === 'supervisor' ? 'supervisor' : 'operativo'
+  // Valida el rol según el tipo de empresa
+  const company = db.companies.find((c) => c.id === companyId)
+  const companyType = company?.tipo ?? 'empresa'
+  const validRoles = companyType === 'academia'
+    ? ['admin', 'docente', 'estudiante']
+    : ['admin', 'supervisor', 'operativo']
+
+  const resolvedRole = validRoles.includes(role) ? role : (companyType === 'academia' ? 'estudiante' : 'operativo')
 
   const invitation = await createUserInvitation({
     companyId,
