@@ -2,8 +2,10 @@
  * Job automático que se ejecuta periódicamente para:
  * 1. Auto-cerrar turnos sin salida marcada (30 min después de horaFin)
  * 2. Auto-rechazar turnos no confirmados antes de su deadline
+ * 3. Eliminar invitaciones expiradas (más de 1 hora)
  */
 import { readDatabase, registerHorasTurno, updateTurn } from '../lib/database.js'
+import { getUserInvitationsCollection } from '../lib/mongodb.js'
 import type { AttendanceRecord, Turn } from '../types.js'
 
 const AUTO_CLOSE_GRACE_MINUTES = 30
@@ -101,5 +103,21 @@ export async function runAutoCloseShifts() {
 
   if (closedCount > 0 || rejectedCount > 0) {
     console.log(`[auto-close] ${closedCount} turno(s) cerrado(s) automáticamente, ${rejectedCount} rechazado(s) por vencimiento.`)
+  }
+
+  // ── Eliminar invitaciones expiradas (pendientes que ya pasaron de 1 hora)
+  try {
+    const invCol = await getUserInvitationsCollection()
+    const nowISO = new Date().toISOString()
+    const deleteResult = await invCol.deleteMany({
+      status: 'pendiente',
+      expiresAt: { $lt: nowISO },
+    })
+    if (deleteResult.deletedCount > 0) {
+      console.log(`[auto-close] ${deleteResult.deletedCount} invitación(es) expirada(s) eliminada(s).`)
+    }
+  } catch (err) {
+    // No bloquea el job si falla la limpieza
+    console.warn('[auto-close] Error limpiando invitaciones:', err)
   }
 }
