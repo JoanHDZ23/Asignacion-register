@@ -982,16 +982,14 @@ export default function TurnAssignmentsPage() {
       </section>
       ) : null}
 
-      {/* ── Vista personal (operativo y supervisor): biometría + mis turnos ── */}
+      {/* ── Vista personal (operativo y supervisor): mis turnos ── */}
       {!isAdmin ? (
-        <section className="dashboard-grid">
-          {/* Mis turnos */}
-          <article className="content-panel">
-            <header className="content-panel__header">
-              <h2>Mis turnos y asistencia</h2>
-              <span className="turn-table__count">{myTurns.length} asignados</span>
-            </header>
-            <div className="biometric-turn-list">
+        <section className="content-panel" style={{ maxWidth: '100%' }}>
+          <header className="content-panel__header">
+            <h2>Mis turnos y asistencia</h2>
+            <span className="turn-table__count">{myTurns.length} asignados</span>
+          </header>
+          <div className="biometric-turn-list">
               {myTurns.length ? myTurns.map((turn) => {
                 const pendingAction = nextAttendanceAction(turn)
                 return (
@@ -1086,7 +1084,6 @@ export default function TurnAssignmentsPage() {
                 </article>
               )}
             </div>
-          </article>
         </section>
       ) : null}
 
