@@ -712,10 +712,11 @@ attendanceRouter.post('/mark', async (request, response) => {
   // ── Verificación facial con DeepFace (solo en entrada y si hay foto) ──
   if (parsedAction === 'entrada' && photoBase64) {
     const faceResult = await verifyFace(user.id, photoBase64)
-    if (!faceResult.verified) {
+    if (!faceResult.verified && faceResult.success) {
       response.status(403).json({
         message: faceResult.message ?? 'La verificación facial falló. El rostro no coincide con el registrado.',
         code: 'FACE_VERIFICATION_FAILED',
+        confidence: faceResult.confidence,
         distance: faceResult.distance,
       })
       return
@@ -772,27 +773,43 @@ attendanceRouter.post('/mark', async (request, response) => {
 attendanceRouter.post('/register-face', async (request, response) => {
   const { imageBase64, faceDescriptor } = request.body as { imageBase64?: string; faceDescriptor?: number[] }
 
-  if (!faceDescriptor || !Array.isArray(faceDescriptor) || faceDescriptor.length !== 128) {
-    response.status(400).json({ message: 'El descriptor facial (128 puntos) es requerido.' })
-    return
-  }
-
   const user = await readLocalUser(request.authUser!.userId)
   if (!user) {
     response.status(404).json({ message: 'Usuario no encontrado.' })
     return
   }
 
-  // Save descriptor to user profile
-  user.faceDescriptor = faceDescriptor
-  await updateUserLocal(user)
-
-  // Also register in DeepFace service if available (optional, as backup)
-  if (imageBase64) {
-    await registerFace(user.id, imageBase64).catch(() => {})
+  // Save 128-point descriptor from face-api.js (browser-side)
+  if (faceDescriptor && Array.isArray(faceDescriptor) && faceDescriptor.length === 128) {
+    user.faceDescriptor = faceDescriptor
+    await updateUserLocal(user)
   }
 
-  response.json({ success: true, message: 'Rostro escaneado y métricas faciales registradas correctamente.' })
+  // Also register in DeepFace FastAPI service (server-side backup)
+  if (imageBase64) {
+    const result = await registerFace(user.id, imageBase64)
+    if (!result.success) {
+      // If DeepFace fails but we have the descriptor, still succeed
+      if (!faceDescriptor) {
+        response.status(400).json({ message: result.error ?? 'Error al registrar rostro en el servicio.' })
+        return
+      }
+    }
+  }
+
+  if (!faceDescriptor && !imageBase64) {
+    response.status(400).json({ message: 'Se requiere faceDescriptor (128 puntos) o imageBase64.' })
+    return
+  }
+
+  response.json({
+    success: true,
+    message: 'Rostro escaneado y registrado correctamente. Se verificará tu identidad al marcar entrada.',
+    methods: {
+      browserSide: Boolean(faceDescriptor?.length === 128),
+      serverSide: Boolean(imageBase64),
+    },
+  })
 })
 
 /**

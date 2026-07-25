@@ -1,77 +1,115 @@
 /**
- * Face Recognition client — calls the DeepFace Python microservice
+ * Face Recognition client — calls the FastAPI + DeepFace microservice
+ * Endpoint: POST /api/verify-face
  */
 
 const FACE_SERVICE_URL = process.env.FACE_SERVICE_URL ?? ''
 
 export interface FaceVerifyResult {
+  success: boolean
   verified: boolean
-  distance?: number
-  threshold?: number
-  message?: string
-  error?: string
-  code?: string
+  confidence: number
+  distance: number
+  threshold: number
+  model: string
+  message: string
 }
 
 /**
  * Register a user's face for future verification.
+ * Sends the photo to the DeepFace service for storage.
  */
-export async function registerFace(userId: string, imageBase64: string): Promise<{ success: boolean; error?: string }> {
-  if (!FACE_SERVICE_URL) return { success: true } // Skip if service not configured
+export async function registerFace(
+  employeeId: string,
+  imageBase64: string,
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  if (!FACE_SERVICE_URL) return { success: true, message: 'Servicio facial no configurado' }
 
   try {
-    const response = await fetch(`${FACE_SERVICE_URL}/register`, {
+    const response = await fetch(`${FACE_SERVICE_URL}/api/register-face`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, imageBase64 }),
+      body: JSON.stringify({ employeeId, imageBase64 }),
     })
 
-    const data = await response.json() as { success?: boolean; error?: string }
+    const data = await response.json() as { success?: boolean; message?: string; detail?: string }
 
     if (!response.ok) {
-      return { success: false, error: data.error ?? 'Error al registrar rostro' }
+      return { success: false, error: data.detail ?? data.message ?? 'Error al registrar rostro' }
     }
 
-    return { success: true }
+    return { success: true, message: data.message }
   } catch (error) {
     console.warn('[face-recognition] Servicio no disponible para registro:', (error as Error).message)
-    return { success: true } // Don't block if service is down
+    return { success: true, message: 'Servicio facial no disponible — registro omitido' }
   }
 }
 
 /**
  * Verify a face against the registered reference.
- * Returns verified=true if the face matches, or if the service is unavailable (graceful degradation).
+ * Returns the full verification result with confidence percentage.
  */
-export async function verifyFace(userId: string, imageBase64: string): Promise<FaceVerifyResult> {
-  if (!FACE_SERVICE_URL) return { verified: true, message: 'Servicio facial no configurado — bypass' }
+export async function verifyFace(
+  employeeId: string,
+  imageBase64: string,
+): Promise<FaceVerifyResult> {
+  if (!FACE_SERVICE_URL) {
+    return {
+      success: true,
+      verified: true,
+      confidence: 100,
+      distance: 0,
+      threshold: 0.4,
+      model: 'bypass',
+      message: 'Servicio facial no configurado — verificación omitida',
+    }
+  }
 
   try {
-    const response = await fetch(`${FACE_SERVICE_URL}/verify`, {
+    const response = await fetch(`${FACE_SERVICE_URL}/api/verify-face`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, imageBase64 }),
+      body: JSON.stringify({ employeeId, imageBase64 }),
     })
 
-    const data = await response.json() as FaceVerifyResult
+    const data = await response.json() as FaceVerifyResult & { detail?: string }
 
     if (!response.ok) {
-      // If no face registered, let them through (first time)
-      if (data.code === 'NO_FACE_REGISTERED') {
-        return { verified: true, message: 'Sin rostro registrado — se omite verificación' }
+      // 404 = no face registered → allow through (first time)
+      if (response.status === 404) {
+        return {
+          success: true,
+          verified: true,
+          confidence: 0,
+          distance: 1,
+          threshold: 0.4,
+          model: 'bypass',
+          message: 'Sin rostro registrado — verificación omitida',
+        }
       }
-      // If face not detected in image
-      if (data.code === 'NO_FACE_DETECTED') {
-        return { verified: false, message: data.error ?? 'No se detectó rostro en la imagen' }
+      return {
+        success: false,
+        verified: false,
+        confidence: 0,
+        distance: 1,
+        threshold: 0.4,
+        model: 'error',
+        message: data.detail ?? 'Error en verificación facial',
       }
-      return { verified: false, error: data.error }
     }
 
     return data
   } catch (error) {
     console.warn('[face-recognition] Servicio no disponible:', (error as Error).message)
-    // Graceful degradation: if service is down, allow entry
-    return { verified: true, message: 'Servicio facial no disponible — verificación omitida' }
+    return {
+      success: true,
+      verified: true,
+      confidence: 0,
+      distance: 0,
+      threshold: 0.4,
+      model: 'bypass',
+      message: 'Servicio facial no disponible — verificación omitida',
+    }
   }
 }
 
