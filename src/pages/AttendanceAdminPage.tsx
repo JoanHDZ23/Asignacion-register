@@ -663,6 +663,7 @@ export default function AttendanceAdminPage() {
 
     let created = 0
     const errors: string[] = []
+    const createdWorkers: Array<{ nombre: string; telefono?: string }> = []
 
     for (const workerId of selectedWorkerIds) {
       try {
@@ -677,6 +678,8 @@ export default function AttendanceAdminPage() {
           },
         })
         created++
+        const worker = workers.find((w) => w.id === workerId)
+        if (worker) createdWorkers.push({ nombre: worker.nombreCompleto, telefono: worker.telefono })
       } catch {
         const worker = workers.find((w) => w.id === workerId)
         errors.push(worker?.nombreCompleto ?? workerId)
@@ -684,11 +687,29 @@ export default function AttendanceAdminPage() {
     }
 
     if (created > 0) {
+      // Build WhatsApp notification link for the first worker with phone
+      const loc = locations.find((l) => l.id === turnForm.locationId)
+      const appUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard/asignacion-turnos` : ''
+      const message = `🔔 *Nuevo turno asignado*\n\n` +
+        `📍 ${loc?.nombre ?? turnForm.titulo}\n` +
+        `📅 ${turnForm.fecha}\n` +
+        `🕐 ${turnForm.hora}${turnForm.horaFin ? ` - ${turnForm.horaFin}` : ''}\n\n` +
+        `Ingresa para confirmar tu asistencia:\n${appUrl}`
+
+      // Open WhatsApp for each worker that has a phone number
+      for (const w of createdWorkers) {
+        if (w.telefono) {
+          const phone = w.telefono.replace(/\D/g, '').replace(/^0/, '57')
+          const waUrl = `https://wa.me/${phone.startsWith('57') ? phone : '57' + phone}?text=${encodeURIComponent(message)}`
+          window.open(waUrl, '_blank')
+        }
+      }
+
       setTurnFeedback({
         kind: errors.length ? 'error' : 'success',
         message: errors.length
           ? `${created} turno(s) creados. Falló: ${errors.join(', ')}.`
-          : `${created} turno(s) "${turnForm.titulo}" registrados correctamente.`,
+          : `${created} turno(s) "${turnForm.titulo}" registrados. ${createdWorkers.filter((w) => w.telefono).length ? 'Notificaciones WhatsApp enviadas.' : ''}`,
       })
       setActiveModal(null)
       setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4' })
