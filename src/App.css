@@ -150,6 +150,7 @@ button, input, textarea, select { font: inherit; }
 .app-layout {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--clr-bg);
 }
 
@@ -162,9 +163,10 @@ button, input, textarea, select { font: inherit; }
   background: var(--clr-surface);
   border-right: 1px solid var(--clr-border);
   height: 100vh;
+  height: 100dvh;
   position: sticky;
   top: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .sidebar-logo {
   display: flex;
@@ -186,7 +188,7 @@ button, input, textarea, select { font: inherit; }
 .sidebar-logo__sub   { font-size: 11px; color: var(--clr-text-3); }
 
 /* Nav */
-.sidebar-nav { flex: 1; padding: 1rem .75rem; display: grid; gap: .25rem; align-content: start; }
+.sidebar-nav { flex: 1; padding: 1rem .75rem; display: grid; gap: .25rem; align-content: start; overflow-y: auto; min-height: 0; }
 .sidebar-nav__group { display: grid; gap: .25rem; margin-bottom: .75rem; }
 .sidebar-nav__label {
   font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
@@ -857,9 +859,14 @@ button, input, textarea, select { font: inherit; }
   .sidebar {
     position: fixed; inset: 0 auto 0 0; z-index: 40;
     width: min(85vw, 280px);
+    height: 100%; height: 100dvh;
     transform: translateX(-100%); transition: transform .25s ease;
+    display: flex; flex-direction: column;
+    overflow: hidden;
   }
   .sidebar--open { transform: translateX(0); }
+  .sidebar-nav { flex: 1; overflow-y: auto; min-height: 0; }
+  .sidebar-footer { flex-shrink: 0; }
   .top-bar { display: none; }
   .mobile-bar {
     display: flex; align-items: center; gap: .75rem;
