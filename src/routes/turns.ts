@@ -57,7 +57,7 @@ turnsRouter.get('/', async (request, response) => {
   response.json(enriched)
 })
 
-turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
+turnsRouter.post('/', async (request, response) => {
   const { titulo, descripcion, fecha, hora, horaFin, assignedToUserId, locationId, confirmHoursLimit } = request.body ?? {}
 
   if (!titulo || !fecha || !hora || !assignedToUserId || !locationId) {
@@ -135,7 +135,7 @@ turnsRouter.post('/', requireRole(['admin']), async (request, response) => {
 /**
  * PATCH /turns/:turnId — Editar datos del turno (fecha, hora, ubicación)
  */
-turnsRouter.patch('/:turnId', requireRole(['admin']), async (request, response) => {
+turnsRouter.patch('/:turnId', async (request, response) => {
   const { turnId } = request.params
   const { fecha, hora, horaFin, locationId, locationNombre, descripcion } = request.body ?? {}
 
@@ -183,7 +183,7 @@ turnsRouter.patch('/:turnId', requireRole(['admin']), async (request, response) 
   response.json(turn)
 })
 
-turnsRouter.patch('/:turnId/assign', requireRole(['admin']), async (request, response) => {
+turnsRouter.patch('/:turnId/assign', async (request, response) => {
   const { turnId } = request.params
   const { assignedToUserId } = request.body ?? {}
 
@@ -388,7 +388,7 @@ turnsRouter.post('/:turnId/novedades', async (request, response) => {
  * GET /turns/:turnId/available-workers
  * Devuelve empleados operativos sin turno activo en la misma fecha del turno.
  */
-turnsRouter.get('/:turnId/available-workers', requireRole(['admin']), async (request, response) => {
+turnsRouter.get('/:turnId/available-workers', async (request, response) => {
   const { turnId } = request.params
   const db = await readDatabase()
   const currentUser = db.users.find((u) => u.id === request.authUser!.userId)
@@ -419,7 +419,7 @@ turnsRouter.get('/:turnId/available-workers', requireRole(['admin']), async (req
  * PATCH /turns/:turnId/reassign
  * Rechaza el turno del empleado actual y lo reasigna a otro disponible.
  */
-turnsRouter.patch('/:turnId/reassign', requireRole(['admin']), async (request, response) => {
+turnsRouter.patch('/:turnId/reassign', async (request, response) => {
   const { turnId } = request.params
   const { newUserId } = request.body as { newUserId?: string }
 
@@ -463,7 +463,7 @@ turnsRouter.patch('/:turnId/reassign', requireRole(['admin']), async (request, r
   response.json(turn)
 })
 
-turnsRouter.delete('/:turnId', requireRole(['admin']), async (request, response) => {
+turnsRouter.delete('/:turnId', async (request, response) => {
   const turnId = String(request.params.turnId)
 
   const db = await readDatabase()
