@@ -794,6 +794,16 @@ export default function AttendanceAdminPage() {
     }
   }
 
+  const resetFaceRegistration = async (userId: string, nombre: string) => {
+    if (!token) return
+    try {
+      await apiRequest(`/users/${userId}/reset-face`, { method: 'POST', token })
+      setTurnFeedback({ kind: 'success', message: `Registro facial restablecido para ${nombre}. Podrá registrar su rostro en el próximo ingreso.` })
+    } catch (err) {
+      setTurnFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error al restablecer registro facial.' })
+    }
+  }
+
   const openEditTurn = (turn: TurnResponse) => {
     setEditingTurnData({
       turn,
@@ -1319,6 +1329,9 @@ export default function AttendanceAdminPage() {
                   <>
                     <Button type="button" size="sm" variant="ghost" onClick={() => { setEditingWorker(w); setActiveModal('worker-edit') }}>
                       <Icon name="icon-clipboard" size={13} /> Editar
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => void resetFaceRegistration(w.id, w.nombreCompleto)}>
+                      <Icon name="icon-refresh" size={13} /> Rostro
                     </Button>
                     <Button type="button" size="sm" variant="ghost" className="btn-danger-text" onClick={() => { setDeletingWorker(w); setActiveModal('worker-delete') }}>
                       <Icon name="icon-x-circle" size={13} /> Eliminar

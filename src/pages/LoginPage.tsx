@@ -57,23 +57,32 @@ export default function LoginPage() {
       setCurrentToken(loginResponse.token)
       setCurrentUser(loginResponse.user)
 
-      // Check if user needs biometric/face setup (first login)
+      // Check if user needs biometric/face setup (first login only)
       try {
         const [bioStatus, faceStatus] = await Promise.all([
           apiRequest<{ biometricConfigured: boolean }>('/attendance/biometric-status', { token: loginResponse.token }),
           apiRequest<{ hasFaceRegistered: boolean; canRegisterFace: boolean }>('/attendance/face-status', { token: loginResponse.token }),
         ])
 
+        // Si ya tiene biometría Y rostro → directo al dashboard
+        if (bioStatus.biometricConfigured && faceStatus.hasFaceRegistered) {
+          navigate('/dashboard', { replace: true })
+          return
+        }
+
+        // Si no tiene biometría → pide activarla
         if (!bioStatus.biometricConfigured) {
           setSetupStep('biometric')
           return
         }
+
+        // Si tiene biometría pero no rostro Y puede registrar → pide rostro
         if (!faceStatus.hasFaceRegistered && faceStatus.canRegisterFace) {
           setSetupStep('face')
           return
         }
       } catch {
-        // If check fails, just proceed to dashboard
+        // Si falla la verificación, ir al dashboard normalmente
       }
 
       navigate('/dashboard', { replace: true })
