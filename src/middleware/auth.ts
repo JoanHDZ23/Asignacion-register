@@ -25,10 +25,30 @@ export function requireAuth(request: Request, response: Response, next: NextFunc
 
   try {
     request.authUser = verifyToken(token)
-    next()
+    // Root no necesita verificación de empresa
+    if (request.authUser.role === 'root') {
+      next()
+      return
+    }
+    // Verifica que la empresa esté activa
+    void checkCompanyActive(request, response, next)
   } catch {
     response.status(401).json({ message: 'Token invalido o vencido.' })
   }
+}
+
+async function checkCompanyActive(request: Request, response: Response, next: NextFunction) {
+  try {
+    const db = await readDatabase()
+    const company = db.companies.find((c) => c.id === request.authUser!.companyId)
+    if (company && company.activa === false) {
+      response.status(403).json({ message: 'Tu empresa está inactiva. Contacta al administrador del sistema.' })
+      return
+    }
+  } catch {
+    // Si falla la lectura, dejar pasar
+  }
+  next()
 }
 
 /**

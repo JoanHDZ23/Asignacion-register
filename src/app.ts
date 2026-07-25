@@ -2,7 +2,6 @@ import cors from 'cors'
 import express from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { openApiDocument } from './lib/openapi.js'
-import { requireActiveCompany } from './middleware/auth.js'
 import { authRouter } from './routes/auth.js'
 import { attendanceRouter } from './routes/attendance.js'
 import { companiesRouter } from './routes/companies.js'
@@ -47,16 +46,16 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiDocument))
 
 app.use('/api/auth', authRouter)
 app.use('/api/root', rootRouter)
-app.use('/api/attendance', requireActiveCompany, attendanceRouter)
-app.use('/api/companies', requireActiveCompany, companiesRouter)
-app.use('/api/groups', requireActiveCompany, groupsRouter)
-app.use('/api/locations', requireActiveCompany, locationsRouter)
-app.use('/api/messages', requireActiveCompany, messagesRouter)
-app.use('/api/operations', requireActiveCompany, operationsRouter)
-app.use('/api/positions', requireActiveCompany, positionsRouter)
-app.use('/api/settings', requireActiveCompany, settingsRouter)
-app.use('/api/users', requireActiveCompany, usersRouter)
-app.use('/api/turns', requireActiveCompany, turnsRouter)
+app.use('/api/attendance', attendanceRouter)
+app.use('/api/companies', companiesRouter)
+app.use('/api/groups', groupsRouter)
+app.use('/api/locations', locationsRouter)
+app.use('/api/messages', messagesRouter)
+app.use('/api/operations', operationsRouter)
+app.use('/api/positions', positionsRouter)
+app.use('/api/settings', settingsRouter)
+app.use('/api/users', usersRouter)
+app.use('/api/turns', turnsRouter)
 
 app.use(
   (
