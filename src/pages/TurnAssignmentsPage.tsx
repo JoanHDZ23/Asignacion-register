@@ -342,10 +342,12 @@ export default function TurnAssignmentsPage() {
         if (faceRegVideoRef.current) faceRegVideoRef.current.srcObject = stream
         setFaceScanning(true)
 
-        // Start real-time face detection loop
-        const { loadFaceModels } = await import('../lib/face-scan')
-        await loadFaceModels()
-        const faceapi = await import('face-api.js')
+        // Start real-time face detection loop (graceful if models fail)
+        try {
+          const { loadFaceModels } = await import('../lib/face-scan')
+          const loaded = await loadFaceModels()
+          if (!loaded || cancelled) { setFaceDetected(true); return } // Allow capture without detection
+          const faceapi = await import('face-api.js')
 
         const detectLoop = async () => {
           if (cancelled) return
@@ -402,6 +404,7 @@ export default function TurnAssignmentsPage() {
         }
 
         void detectLoop()
+        } catch { /* face detection models failed — allow manual capture */ setFaceDetected(true) }
       } catch { /* camera not available */ }
     }
     void startCam()
@@ -719,6 +722,7 @@ export default function TurnAssignmentsPage() {
         // Espera a que el video esté listo
         await new Promise((r) => setTimeout(r, 1500))
 
+        try {
         // Carga face-api.js y obtiene descriptor registrado
         const [faceScan, descResponse] = await Promise.all([
           import('../lib/face-scan'),
@@ -775,6 +779,10 @@ export default function TurnAssignmentsPage() {
         }
 
         void runAutoVerify()
+        } catch (faceErr) {
+          // Si la verificación facial falla, permite la entrada normalmente (toma foto manual)
+          console.warn('[face-verify] Error en verificación automática:', faceErr)
+        }
       }
     }
 
