@@ -106,3 +106,35 @@ export function resolveAllowedModules(db: DatabaseSchema, user: User): AccessMod
   // Intersección con módulos habilitados de la empresa
   return defaults.filter((m) => companyModules.includes(m))
 }
+
+/**
+ * Resuelve los niveles de permiso (view/edit) para cada módulo del usuario.
+ * Admin siempre tiene 'edit' en todo. Los demás dependen del cargo.
+ */
+export function resolvePermissionLevels(db: DatabaseSchema, user: User): Record<string, 'view' | 'edit'> {
+  const modules = resolveAllowedModules(db, user)
+  const levels: Record<string, 'view' | 'edit'> = {}
+
+  // Admin: siempre edit en todo
+  if (user.role === 'admin') {
+    for (const m of modules) levels[m] = 'edit'
+    return levels
+  }
+
+  // Si el cargo tiene permissionLevels definidos, usarlos
+  const position = user.positionId
+    ? db.positions.find((item) => item.id === user.positionId && item.companyId === user.companyId)
+    : undefined
+
+  for (const m of modules) {
+    if (position?.permissionLevels?.[m]) {
+      levels[m] = position.permissionLevels[m]
+    } else {
+      // Por defecto: supervisor puede editar turnos e informes, operativo solo ve
+      const isSup = user.role === 'supervisor' || user.cargo?.toLowerCase().includes('supervisor')
+      levels[m] = isSup ? 'edit' : 'view'
+    }
+  }
+
+  return levels
+}

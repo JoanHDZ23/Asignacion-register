@@ -157,12 +157,15 @@ export type Company = {
   createdAt: string
 }
 
+export type PermissionLevel = 'view' | 'edit'
+
 export type Position = {
   id: string
   companyId: string
   nombre: string
   descripcion?: string
   permissions: AccessModule[]
+  permissionLevels?: Record<string, PermissionLevel>  // module → 'view' | 'edit'
   valorHora?: number
   activa: boolean
   createdAt: string

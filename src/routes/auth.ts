@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { signToken } from '../lib/auth.js'
-import { getDefaultModulesByType, getDefaultSettings, resolveAllowedModules } from '../lib/access.js'
+import { getDefaultModulesByType, getDefaultSettings, resolveAllowedModules, resolvePermissionLevels } from '../lib/access.js'
 import {
   createCompany,
   createUser,
@@ -160,6 +160,7 @@ authRouter.post('/login', async (request, response) => {
         role: user.role,
         positionId: user.positionId,
         allowedModules: resolveAllowedModules(db, user),
+        permissionLevels: resolvePermissionLevels(db, user),
       },
     })
   } catch (error) {
