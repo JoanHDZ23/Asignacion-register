@@ -47,10 +47,10 @@ export async function runAutoCloseShifts() {
   let rejectedCount = 0
 
   for (const turn of db.turns) {
-    // ── Auto-cierre: SOLO turnos ya confirmados con checkIn pero sin checkOut, después de gracia
-    // Los turnos en 'en_proceso' (sin confirmación de supervisor) NO se cierran automáticamente
+    // ── Auto-cierre: turnos en_proceso con checkIn pero sin checkOut, 2h después de horaFin
+    // Cierra con la hora de salida programada del turno (horaFin)
     if (
-      turn.estado === 'confirmado' &&
+      turn.estado === 'en_proceso' &&
       turn.attendance?.checkIn &&
       !turn.attendance?.checkOut &&
       turn.horaFin &&
