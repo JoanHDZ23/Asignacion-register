@@ -1979,3 +1979,27 @@ button, input, textarea, select { font: inherit; }
   border-radius: 999px;
   backdrop-filter: blur(4px);
 }
+
+/* ─── Setup Card (first login biometric/face) ──────────────── */
+.setup-card {
+  display: grid;
+  gap: 1rem;
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  background: var(--clr-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--clr-border);
+  text-align: center;
+}
+.setup-card__icon {
+  width: 64px; height: 64px;
+  margin: 0 auto;
+  display: grid; place-items: center;
+  background: var(--clr-purple-light);
+  color: var(--clr-purple-mid);
+  border-radius: 50%;
+}
+.setup-card h2 { font-size: 1.25rem; margin: 0; }
+.setup-card p { font-size: 14px; color: var(--clr-text-2); margin: 0; }
