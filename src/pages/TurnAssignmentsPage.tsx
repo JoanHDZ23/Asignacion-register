@@ -1011,37 +1011,6 @@ export default function TurnAssignmentsPage() {
       {/* ── Vista personal (operativo y supervisor): biometría + mis turnos ── */}
       {!isAdmin ? (
         <section className="dashboard-grid">
-          {/* Panel biometría */}
-          <article className="content-panel">
-            <header className="content-panel__header">
-              <h2>Verificacion biometrica</h2>
-              <span className="turn-table__count">
-                {biometricStatus.biometricConfigured ? `${biometricStatus.credentialCount} credencial` : 'Sin credencial'}
-              </span>
-            </header>
-            <div className="biometric-panel">
-              <article className="biometric-panel__status">
-                <strong>{biometricStatus.biometricConfigured ? 'Biometria activa en este dispositivo' : 'Registra rostro o huella para marcar asistencia'}</strong>
-                <span>El sistema validara tu biometria y tu ubicacion contra el punto operativo del turno.</span>
-              </article>
-              <Button type="button" icon="icon-fingerprint" onClick={() => void handleRegisterBiometric()} disabled={isBiometricBusy}>
-                {isBiometricBusy ? 'Registrando biometria...' : biometricStatus.biometricConfigured ? 'Actualizar biometria' : 'Registrar biometria'}
-              </Button>
-              {!biometricStatus.biometricConfigured || !faceDetected ? (
-                <Button type="button" variant="ghost" icon="icon-user" onClick={() => setFaceRegisterModal(true)} disabled={isBiometricBusy}>
-                  Registrar rostro facial
-                </Button>
-              ) : (
-                <span style={{ fontSize: 12, color: 'var(--clr-green)', fontWeight: 500 }}>✓ Rostro facial registrado</span>
-              )}
-              {biometricFeedback.message ? (
-                <p className={biometricFeedback.kind === 'error' ? 'turn-table__error' : 'turn-table__success'}>
-                  {biometricFeedback.message}
-                </p>
-              ) : null}
-            </div>
-          </article>
-
           {/* Mis turnos */}
           <article className="content-panel">
             <header className="content-panel__header">
