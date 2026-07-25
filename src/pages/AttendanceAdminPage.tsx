@@ -114,13 +114,6 @@ const academiaPermissionGroups: PermissionGroup[] = [
   },
 ]
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _positionAccessOptions = Object.entries(accessModuleLabels).map(([value, label]) => ({
-  value: value as AccessModule,
-  label,
-  description: accessModuleDescriptions[value as AccessModule],
-}))
-
 const positionFields: CustomFormField[] = [
   { name: 'nombre', label: 'Nombre del cargo', placeholder: 'Ej. Auxiliar de enfermeria', required: true },
   { name: 'valorHora', label: 'Valor por hora ($)', placeholder: 'Ej. 15000', type: 'text' },
