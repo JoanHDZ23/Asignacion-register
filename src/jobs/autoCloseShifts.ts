@@ -8,7 +8,7 @@ import { readDatabase, registerHorasTurno, updateTurn } from '../lib/database.js
 import { getUserInvitationsCollection } from '../lib/mongodb.js'
 import type { AttendanceRecord, Turn } from '../types.js'
 
-const AUTO_CLOSE_GRACE_MINUTES = 30
+const AUTO_CLOSE_GRACE_MINUTES = 120  // 2 horas después de horaFin
 
 function buildAutoCheckOut(turn: Turn): AttendanceRecord | null {
   if (!turn.horaFin || !turn.fecha) return null
@@ -47,9 +47,10 @@ export async function runAutoCloseShifts() {
   let rejectedCount = 0
 
   for (const turn of db.turns) {
-    // ── Auto-cierre: turnos confirmados con checkIn pero sin checkOut, 30 min después de horaFin
+    // ── Auto-cierre: SOLO turnos ya confirmados con checkIn pero sin checkOut, después de gracia
+    // Los turnos en 'en_proceso' (sin confirmación de supervisor) NO se cierran automáticamente
     if (
-      (turn.estado === 'confirmado' || turn.estado === 'en_proceso') &&
+      turn.estado === 'confirmado' &&
       turn.attendance?.checkIn &&
       !turn.attendance?.checkOut &&
       turn.horaFin &&
