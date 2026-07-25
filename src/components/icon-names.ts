@@ -21,6 +21,8 @@ export const iconNames = [
   'icon-shield',
   'icon-fingerprint',
   'icon-arrow-right',
+  'icon-arrow-down',
+  'icon-eye',
   'icon-building',
   'icon-briefcase',
   'icon-menu',

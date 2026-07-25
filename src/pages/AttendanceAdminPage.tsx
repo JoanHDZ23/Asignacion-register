@@ -114,7 +114,8 @@ const academiaPermissionGroups: PermissionGroup[] = [
   },
 ]
 
-const positionAccessOptions = Object.entries(accessModuleLabels).map(([value, label]) => ({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _positionAccessOptions = Object.entries(accessModuleLabels).map(([value, label]) => ({
   value: value as AccessModule,
   label,
   description: accessModuleDescriptions[value as AccessModule],
@@ -471,7 +472,7 @@ export default function AttendanceAdminPage() {
   const [addEmployeeId, setAddEmployeeId] = useState('')
   const [addingEmployee, setAddingEmployee] = useState(false)
 
-  const handleAddEmployee = async (group: typeof groupedTurns[0]) => {
+  const handleAddEmployee = async (group: { fecha: string; hora: string; horaFin: string; locationId: string; titulo: string }) => {
     if (!token || !addEmployeeId) return
     setAddingEmployee(true)
     try {
@@ -1122,7 +1123,7 @@ export default function AttendanceAdminPage() {
                                       </select>
                                       <Button type="button" size="sm" variant="primary"
                                         disabled={!addEmployeeId || addingEmployee}
-                                        onClick={() => void handleAddEmployee({ ...turno, key: subKey, ubicacion: locGroup.ubicacion, locationId: locGroup.locationId, mapsUrl: locGroup.mapsUrl } as any)}>
+                                        onClick={() => void handleAddEmployee({ fecha: turno.fecha, hora: turno.hora, horaFin: turno.horaFin, locationId: locGroup.locationId, titulo: turno.titulo })}>
                                         {addingEmployee ? 'Agregando...' : 'Confirmar'}
                                       </Button>
                                     </div>
