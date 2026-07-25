@@ -757,37 +757,33 @@ attendanceRouter.post('/register-face', async (request, response) => {
     return
   }
 
-  // Save 128-point descriptor from face-api.js (browser-side)
+  // Solo permite registro si NO tiene rostro O si admin habilitó re-registro
+  if (user.faceDescriptor?.length === 128 && user.faceRegisteredAt && !user.allowFaceReRegister) {
+    response.status(409).json({ message: 'Ya tienes un rostro registrado. Contacta al administrador para re-registrar.' })
+    return
+  }
+
   if (faceDescriptor && Array.isArray(faceDescriptor) && faceDescriptor.length === 128) {
     user.faceDescriptor = faceDescriptor
+    user.faceRegisteredAt = new Date().toISOString()
+    user.allowFaceReRegister = false
     await updateUserLocal(user)
   }
 
-  // Also register in DeepFace FastAPI service (server-side backup)
   if (imageBase64) {
     const result = await registerFace(user.id, imageBase64)
-    if (!result.success) {
-      // If DeepFace fails but we have the descriptor, still succeed
-      if (!faceDescriptor) {
-        response.status(400).json({ message: result.error ?? 'Error al registrar rostro en el servicio.' })
-        return
-      }
+    if (!result.success && !faceDescriptor) {
+      response.status(400).json({ message: result.error ?? 'Error al registrar rostro.' })
+      return
     }
   }
 
   if (!faceDescriptor && !imageBase64) {
-    response.status(400).json({ message: 'Se requiere faceDescriptor (128 puntos) o imageBase64.' })
+    response.status(400).json({ message: 'Se requiere faceDescriptor o imageBase64.' })
     return
   }
 
-  response.json({
-    success: true,
-    message: 'Rostro escaneado y registrado correctamente. Se verificará tu identidad al marcar entrada.',
-    methods: {
-      browserSide: Boolean(faceDescriptor?.length === 128),
-      serverSide: Boolean(imageBase64),
-    },
-  })
+  response.json({ success: true, message: 'Rostro registrado correctamente.', faceRegisteredAt: user.faceRegisteredAt })
 })
 
 /**
@@ -801,8 +797,10 @@ attendanceRouter.get('/face-status', async (request, response) => {
   const serviceAvailable = await isFaceServiceAvailable()
   response.json({
     hasFaceRegistered: hasFaceDescriptor,
+    faceRegisteredAt: user?.faceRegisteredAt ?? null,
+    allowFaceReRegister: user?.allowFaceReRegister ?? false,
+    canRegisterFace: !hasFaceDescriptor || Boolean(user?.allowFaceReRegister),
     serviceAvailable,
-    serviceUrl: process.env.FACE_SERVICE_URL ? 'configured' : 'not_configured',
   })
 })
 

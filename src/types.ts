@@ -194,6 +194,8 @@ export type User = {
   activa: boolean
   biometric?: UserBiometricProfile
   faceDescriptor?: number[]           // 128-point facial metric from face-api.js
+  faceRegisteredAt?: string           // ISO date when face was registered
+  allowFaceReRegister?: boolean       // Admin can set to true to allow re-registration
   createdAt: string
 }
 

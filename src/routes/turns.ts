@@ -536,3 +536,32 @@ turnsRouter.get('/hours-history', requireRole(['admin', 'supervisor']), async (r
     },
   })
 })
+
+/**
+ * GET /turns/my-hours
+ * Devuelve las horas trabajadas del usuario autenticado (empleado puede ver las suyas).
+ * Query: from, to (opcional)
+ */
+turnsRouter.get('/my-hours', async (request, response) => {
+  const { from, to } = request.query as { from?: string; to?: string }
+  const userId = request.authUser!.userId
+
+  const col = await getHorasTurnoCollection()
+  const filter: Record<string, unknown> = { userId }
+  if (from || to) {
+    filter.fecha = {}
+    if (from) (filter.fecha as Record<string, string>).$gte = from
+    if (to) (filter.fecha as Record<string, string>).$lte = to
+  }
+
+  const records = await col.find(filter).project({ _id: 0 }).sort({ fecha: -1 }).limit(100).toArray()
+
+  const totalHoras = records.reduce((s, r) => s + (r.horasTrabajadas ?? 0), 0)
+  response.json({
+    records,
+    summary: {
+      total: records.length,
+      totalHoras: Math.round(totalHoras * 100) / 100,
+    },
+  })
+})

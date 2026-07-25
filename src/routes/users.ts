@@ -252,3 +252,27 @@ usersRouter.delete('/:userId', adminOnly, async (request, response) => {
   await deleteUser(user.id, companyId)
   response.status(204).send()
 })
+
+/**
+ * POST /users/:userId/reset-face — Admin: permite al usuario re-registrar su rostro
+ */
+usersRouter.post('/:userId/reset-face', adminOnly, async (request, response) => {
+  const db = await readDatabase()
+  const companyId =
+    request.authUser!.companyId ||
+    db.users.find((u) => u.id === request.authUser!.userId)?.companyId || ''
+
+  const user = db.users.find(
+    (u) => u.id === request.params.userId && u.companyId === companyId,
+  )
+
+  if (!user) {
+    response.status(404).json({ message: 'Usuario no encontrado.' })
+    return
+  }
+
+  user.allowFaceReRegister = true
+  await updateUser(user)
+
+  response.json({ message: `Registro facial habilitado nuevamente para ${user.nombreCompleto}.` })
+})
