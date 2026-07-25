@@ -794,12 +794,12 @@ export default function AttendanceAdminPage() {
           nombreCompleto: values.nombreCompleto,
           correo: values.correo,
           telefono: values.telefono,
-          cargo: values.cargo,
           positionId: values.positionId || undefined,
         },
       })
       setActiveModal(null)
       setEditingWorker(null)
+      setTurnFeedback({ kind: 'success', message: `Empleado "${values.nombreCompleto}" actualizado.` })
       await loadAdminData()
     } catch (err) {
       setTurnFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error al actualizar empleado.' })
@@ -953,13 +953,17 @@ export default function AttendanceAdminPage() {
         ))}
       </div>
 
-      {/* Quick actions — each action controlled by permission level */}
+      {/* Quick actions — based on role and permissions */}
       {(() => {
+        const isAdminRole = currentUser?.role === 'admin'
         const levels = currentUser?.permissionLevels ?? {}
-        const canInvite = levels['configuracion'] === 'edit' || levels['configuracion'] === 'full' || currentUser?.role === 'admin' || isSupervisor
-        const canCreatePosition = levels['configuracion'] === 'full' || currentUser?.role === 'admin'
-        const canCreateLocation = levels['configuracion'] === 'full' || levels['configuracion'] === 'edit' || currentUser?.role === 'admin'
-        const canCreateTurn = levels['turnos-fijos'] === 'edit' || levels['turnos-fijos'] === 'full' || currentUser?.role === 'admin'
+        const hasLevel = (mod: string, ...lvl: string[]) => lvl.includes(levels[mod] ?? '')
+
+        // Admin always sees everything. Others check permissionLevels OR fallback to module access
+        const canInvite = isAdminRole || isSupervisor || hasLevel('configuracion', 'edit', 'full')
+        const canCreatePosition = isAdminRole || hasLevel('configuracion', 'full')
+        const canCreateLocation = isAdminRole || hasLevel('configuracion', 'edit', 'full') || hasLevel('geolocalizacion', 'edit', 'full')
+        const canCreateTurn = isAdminRole || hasLevel('turnos-fijos', 'edit', 'full')
         const showActions = canInvite || canCreatePosition || canCreateLocation || canCreateTurn
 
         return showActions ? (
@@ -1471,6 +1475,7 @@ export default function AttendanceAdminPage() {
                   <Button type="button" variant="ghost" size="sm" onClick={() => {
                     setEditingPosition(pos)
                     setPositionPermissions(pos.permissions?.length ? pos.permissions : ['dashboard', 'turnos-fijos'])
+                    setPositionLevels((pos as any).permissionLevels ?? {})
                     setActiveModal('position')
                   }}>
                     <Icon name="icon-edit" size={14} /> Configurar
@@ -1977,9 +1982,8 @@ export default function AttendanceAdminPage() {
               { name: 'nombreCompleto', label: 'Nombre completo', defaultValue: editingWorker.nombreCompleto, required: true },
               { name: 'correo', label: 'Correo', defaultValue: editingWorker.correo, required: true },
               { name: 'telefono', label: 'Teléfono', defaultValue: editingWorker.telefono ?? '' },
-              { name: 'cargo', label: 'Cargo', defaultValue: editingWorker.cargo },
-              { name: 'positionId', label: 'Cargo (puesto)', type: 'select', defaultValue: editingWorker.positionId ?? '',
-                options: positions.map((p) => ({ label: p.nombre, value: p.id })) },
+              { name: 'positionId', label: 'Cargo', type: 'select', defaultValue: editingWorker.positionId ?? '', required: true,
+                options: [{ label: '— Seleccionar cargo —', value: '' }, ...positions.map((p) => ({ label: p.nombre, value: p.id }))] },
             ]}
             submitLabel="Guardar cambios"
             showReset={false}
