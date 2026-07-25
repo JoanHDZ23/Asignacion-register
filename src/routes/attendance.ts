@@ -770,10 +770,10 @@ attendanceRouter.post('/mark', async (request, response) => {
  * Registra el rostro del usuario para verificación facial futura.
  */
 attendanceRouter.post('/register-face', async (request, response) => {
-  const { imageBase64 } = request.body as { imageBase64?: string }
+  const { imageBase64, faceDescriptor } = request.body as { imageBase64?: string; faceDescriptor?: number[] }
 
-  if (!imageBase64) {
-    response.status(400).json({ message: 'La imagen facial es requerida.' })
+  if (!faceDescriptor || !Array.isArray(faceDescriptor) || faceDescriptor.length !== 128) {
+    response.status(400).json({ message: 'El descriptor facial (128 puntos) es requerido.' })
     return
   }
 
@@ -783,24 +783,51 @@ attendanceRouter.post('/register-face', async (request, response) => {
     return
   }
 
-  const result = await registerFace(user.id, imageBase64)
+  // Save descriptor to user profile
+  user.faceDescriptor = faceDescriptor
+  await updateUserLocal(user)
 
-  if (!result.success) {
-    response.status(400).json({ message: result.error ?? 'Error al registrar el rostro.' })
-    return
+  // Also register in DeepFace service if available (optional, as backup)
+  if (imageBase64) {
+    await registerFace(user.id, imageBase64).catch(() => {})
   }
 
-  response.json({ success: true, message: 'Rostro registrado correctamente para verificación facial.' })
+  response.json({ success: true, message: 'Rostro escaneado y métricas faciales registradas correctamente.' })
 })
 
 /**
  * GET /attendance/face-status
- * Verifica si el servicio facial está disponible.
+ * Verifica si el servicio facial está disponible y si el usuario tiene rostro registrado.
  */
-attendanceRouter.get('/face-status', async (_request, response) => {
+attendanceRouter.get('/face-status', async (request, response) => {
+  const user = await readLocalUser(request.authUser!.userId)
+  const hasFaceDescriptor = Boolean(user?.faceDescriptor?.length === 128)
   const { isFaceServiceAvailable } = await import('../lib/face-recognition.js')
-  const available = await isFaceServiceAvailable()
-  response.json({ available, serviceUrl: process.env.FACE_SERVICE_URL ? 'configured' : 'not_configured' })
+  const serviceAvailable = await isFaceServiceAvailable()
+  response.json({
+    hasFaceRegistered: hasFaceDescriptor,
+    serviceAvailable,
+    serviceUrl: process.env.FACE_SERVICE_URL ? 'configured' : 'not_configured',
+  })
+})
+
+/**
+ * GET /attendance/face-descriptor
+ * Devuelve el descriptor facial almacenado del usuario (para comparación en frontend).
+ */
+attendanceRouter.get('/face-descriptor', async (request, response) => {
+  const user = await readLocalUser(request.authUser!.userId)
+  if (!user) {
+    response.status(404).json({ message: 'Usuario no encontrado.' })
+    return
+  }
+
+  if (!user.faceDescriptor || user.faceDescriptor.length !== 128) {
+    response.status(404).json({ message: 'No hay rostro registrado.', code: 'NO_FACE' })
+    return
+  }
+
+  response.json({ faceDescriptor: user.faceDescriptor })
 })
 
 export { attendanceRouter }

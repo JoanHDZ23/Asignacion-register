@@ -193,6 +193,7 @@ export type User = {
   positionId?: string
   activa: boolean
   biometric?: UserBiometricProfile
+  faceDescriptor?: number[]           // 128-point facial metric from face-api.js
   createdAt: string
 }
 
