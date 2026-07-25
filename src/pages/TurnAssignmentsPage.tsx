@@ -1027,9 +1027,13 @@ export default function TurnAssignmentsPage() {
               <Button type="button" icon="icon-fingerprint" onClick={() => void handleRegisterBiometric()} disabled={isBiometricBusy}>
                 {isBiometricBusy ? 'Registrando biometria...' : biometricStatus.biometricConfigured ? 'Actualizar biometria' : 'Registrar biometria'}
               </Button>
-              <Button type="button" variant="ghost" icon="icon-user" onClick={() => setFaceRegisterModal(true)} disabled={isBiometricBusy}>
-                Registrar rostro facial
-              </Button>
+              {!biometricStatus.biometricConfigured || !faceDetected ? (
+                <Button type="button" variant="ghost" icon="icon-user" onClick={() => setFaceRegisterModal(true)} disabled={isBiometricBusy}>
+                  Registrar rostro facial
+                </Button>
+              ) : (
+                <span style={{ fontSize: 12, color: 'var(--clr-green)', fontWeight: 500 }}>✓ Rostro facial registrado</span>
+              )}
               {biometricFeedback.message ? (
                 <p className={biometricFeedback.kind === 'error' ? 'turn-table__error' : 'turn-table__success'}>
                   {biometricFeedback.message}
