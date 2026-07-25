@@ -910,6 +910,8 @@ button, input, textarea, select { font: inherit; }
 .table-action-btn--edit:hover   { background: var(--clr-blue-light);  border-color: var(--clr-blue); }
 .table-action-btn--delete { color: var(--clr-red); }
 .table-action-btn--delete:hover { background: var(--clr-red-light);   border-color: var(--clr-red); }
+.table-action-btn--wa { color: #25D366; text-decoration: none; }
+.table-action-btn--wa:hover { background: #dcfce7; border-color: #25D366; }
 .table-action-btn--confirm { color: var(--clr-green); }
 .table-action-btn--confirm:hover { background: var(--clr-green-light); border-color: var(--clr-green); }
 .table-action-btn--reject  { color: var(--clr-red); }
