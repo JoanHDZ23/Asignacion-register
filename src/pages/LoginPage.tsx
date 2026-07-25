@@ -64,8 +64,8 @@ export default function LoginPage() {
           apiRequest<{ hasFaceRegistered: boolean; canRegisterFace: boolean }>('/attendance/face-status', { token: loginResponse.token }),
         ])
 
-        // Si ya tiene biometría Y rostro → directo al dashboard
-        if (bioStatus.biometricConfigured && faceStatus.hasFaceRegistered) {
+        // Si ya tiene biometría Y rostro (sin reset pendiente) → directo al dashboard
+        if (bioStatus.biometricConfigured && faceStatus.hasFaceRegistered && !faceStatus.canRegisterFace) {
           navigate('/dashboard', { replace: true })
           return
         }
@@ -76,8 +76,8 @@ export default function LoginPage() {
           return
         }
 
-        // Si tiene biometría pero no rostro Y puede registrar → pide rostro
-        if (!faceStatus.hasFaceRegistered && faceStatus.canRegisterFace) {
+        // Si puede registrar rostro (no tiene o admin lo reseteó) → pide rostro
+        if (faceStatus.canRegisterFace) {
           setSetupStep('face')
           return
         }
@@ -123,7 +123,18 @@ export default function LoginPage() {
     }
   }
 
-  const skipBiometric = () => {
+  const skipBiometric = async () => {
+    // Check if face is already registered before showing face step
+    const token = getCurrentToken()
+    if (token) {
+      try {
+        const faceStatus = await apiRequest<{ hasFaceRegistered: boolean; canRegisterFace: boolean }>('/attendance/face-status', { token })
+        if (faceStatus.hasFaceRegistered || !faceStatus.canRegisterFace) {
+          navigate('/dashboard', { replace: true })
+          return
+        }
+      } catch { /* proceed to face step */ }
+    }
     setSetupStep('face')
   }
 
