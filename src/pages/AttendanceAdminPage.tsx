@@ -177,6 +177,7 @@ export default function AttendanceAdminPage() {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
   const [editingPosition, setEditingPosition] = useState<PositionResponse | null>(null)
   const [positionPermissions, setPositionPermissions] = useState<AccessModule[]>(['dashboard', 'turnos-fijos'])
+  const [positionLevels, setPositionLevels] = useState<Record<string, 'view' | 'edit' | 'full'>>({})
   const [editingLocation, setEditingLocation] = useState<LocationResponse | null>(null)
   const [editingWorker, setEditingWorker] = useState<UserResponse | null>(null)
   const [deletingWorker, setDeletingWorker] = useState<UserResponse | null>(null)
@@ -542,6 +543,7 @@ export default function AttendanceAdminPage() {
             nombre: values.nombre ?? '',
             descripcion: values.descripcion ?? '',
             permissions: positionPermissions,
+            permissionLevels: positionLevels,
             valorHora: valorHora && !Number.isNaN(valorHora) ? valorHora : undefined,
           },
         },
@@ -1563,7 +1565,7 @@ export default function AttendanceAdminPage() {
         <div className="access-picker">
           <div className="access-picker__header">
             <h4>Permisos de acceso</h4>
-            <p>Define que modulos puede ver este cargo. Clasificados por nivel de responsabilidad.</p>
+            <p>Activa módulos y define el nivel: Ver (solo lectura), Editar (crear/modificar), Total (incluye eliminar).</p>
           </div>
           {(companyType === 'empresa' ? empresaPermissionGroups : academiaPermissionGroups).map((group) => (
             <div className="access-picker__group" key={group.title}>
@@ -1575,14 +1577,29 @@ export default function AttendanceAdminPage() {
                 <span className="access-picker__group-desc">{group.description}</span>
               </div>
               <div className="access-picker__grid">
-                {group.modules.map((mod) => (
-                  <button key={mod} type="button"
-                    className={`access-picker__item${positionPermissions.includes(mod) ? ' access-picker__item--on' : ''}`}
-                    onClick={() => togglePermission(mod)}>
-                    <strong>{accessModuleLabels[mod]}</strong>
-                    <span>{accessModuleDescriptions[mod]}</span>
-                  </button>
-                ))}
+                {group.modules.map((mod) => {
+                  const isActive = positionPermissions.includes(mod)
+                  const level = positionLevels[mod] ?? 'view'
+                  return (
+                    <div key={mod} className={`access-picker__item${isActive ? ' access-picker__item--on' : ''}`}>
+                      <button type="button" className="access-picker__toggle" onClick={() => togglePermission(mod)}>
+                        <strong>{accessModuleLabels[mod]}</strong>
+                        <span>{accessModuleDescriptions[mod]}</span>
+                      </button>
+                      {isActive && (
+                        <div className="access-picker__levels">
+                          {(['view', 'edit', 'full'] as const).map((lv) => (
+                            <label key={lv} className={`access-picker__level${level === lv ? ' access-picker__level--active' : ''}`}>
+                              <input type="radio" name={`level-${mod}`} value={lv} checked={level === lv}
+                                onChange={() => setPositionLevels((prev) => ({ ...prev, [mod]: lv }))} />
+                              <span>{lv === 'view' ? 'Ver' : lv === 'edit' ? 'Editar' : 'Total'}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           ))}
