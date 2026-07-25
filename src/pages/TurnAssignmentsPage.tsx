@@ -689,9 +689,11 @@ export default function TurnAssignmentsPage() {
 
   // El <video> siempre está montado en el modal (solo oculto mientras capturing=true).
   // Este effect se dispara cuando el modal se abre para iniciar el stream y verificar ubicación.
+  // Para ENTRADA: detecta el rostro automáticamente, lo compara con el registrado y marca sin foto manual.
   useEffect(() => {
     if (!facialModal.open || !facialModal.capturing) return
     let cancelled = false
+    let autoVerifyDone = false
 
     const startStream = async () => {
       // Inicia cámara y verificación de ubicación en paralelo
@@ -733,6 +735,72 @@ export default function TurnAssignmentsPage() {
 
       if (!cancelled) {
         setFacialModal((prev) => ({ ...prev, capturing: streamResult.status !== 'fulfilled', checkingLocation: false, locationCheck }))
+      }
+
+      // ── Auto-verificación facial para ENTRADA ──
+      if (facialModal.action === 'entrada' && streamResult.status === 'fulfilled' && !cancelled) {
+        const token = getCurrentToken()
+        if (!token) return
+
+        // Espera a que el video esté listo
+        await new Promise((r) => setTimeout(r, 1500))
+
+        // Carga face-api.js y obtiene descriptor registrado
+        const [faceScan, descResponse] = await Promise.all([
+          import('../lib/face-scan'),
+          apiRequest<{ faceDescriptor: number[] }>('/attendance/face-descriptor', { token }).catch(() => null),
+        ])
+
+        if (cancelled || autoVerifyDone) return
+
+        // Inicia loop de detección auto
+        const runAutoVerify = async () => {
+          if (cancelled || autoVerifyDone || !videoRef.current) return
+
+          const descriptor = await faceScan.extractFaceDescriptor(videoRef.current)
+
+          if (!descriptor) {
+            // No face detected — retry
+            if (!cancelled) setTimeout(() => void runAutoVerify(), 800)
+            return
+          }
+
+          // Si hay descriptor registrado, comparar
+          if (descResponse?.faceDescriptor) {
+            const comparison = faceScan.compareFaceDescriptors(descriptor, descResponse.faceDescriptor)
+
+            if (!comparison.match) {
+              // Rostro no coincide — mostrar error pero seguir intentando
+              setBiometricFeedback({ kind: 'error', message: `Rostro no coincide (${Math.round((1 - comparison.distance) * 100)}% similitud). Intenta de nuevo...` })
+              if (!cancelled) setTimeout(() => void runAutoVerify(), 1500)
+              return
+            }
+          }
+
+          // ✅ Rostro verificado (o sin registro previo) — marcar entrada automáticamente
+          autoVerifyDone = true
+
+          // Captura frame para evidencia
+          const video = videoRef.current
+          if (!video) return
+          const canvas = document.createElement('canvas')
+          canvas.width = video.videoWidth || 640
+          canvas.height = video.videoHeight || 480
+          canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height)
+          const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1] ?? ''
+
+          // Cierra modal y marca
+          stopFacialStream()
+          const turn = facialModal.turn
+          setFacialModal({ open: false, turn: null, action: null, previewUrl: null, photoData: null, capturing: false, locationCheck: null, checkingLocation: false })
+
+          if (turn) {
+            setBiometricFeedback({ kind: 'success', message: '✓ Rostro verificado — registrando entrada...' })
+            void handleAttendanceVerification(turn, 'entrada', base64 ? { base64, mimeType: 'image/jpeg' } : null)
+          }
+        }
+
+        void runAutoVerify()
       }
     }
 
