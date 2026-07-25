@@ -21,7 +21,7 @@ positionsRouter.get('/', async (request, response) => {
 })
 
 positionsRouter.post('/', requireRole(['admin']), async (request, response) => {
-  const { nombre, descripcion, permissions, valorHora } = request.body ?? {}
+  const { nombre, descripcion, permissions, permissionLevels, valorHora } = request.body ?? {}
 
   if (!nombre) {
     response.status(400).json({ message: 'El nombre del cargo es requerido.' })
@@ -48,6 +48,7 @@ positionsRouter.post('/', requireRole(['admin']), async (request, response) => {
     permissions: Array.isArray(permissions)
       ? permissions.filter((item): item is AccessModule => typeof item === 'string')
       : ['dashboard', 'turnos-fijos'],
+    permissionLevels: permissionLevels && typeof permissionLevels === 'object' ? permissionLevels : undefined,
     valorHora: typeof valorHora === 'number' ? valorHora : undefined,
     activa: true,
     createdAt: new Date().toISOString(),
@@ -72,7 +73,7 @@ positionsRouter.patch('/:positionId', requireRole(['admin']), async (request, re
     return
   }
 
-  const { nombre, descripcion, permissions, valorHora } = request.body ?? {}
+  const { nombre, descripcion, permissions, permissionLevels, valorHora } = request.body ?? {}
   const nextPermissions = Array.isArray(permissions)
     ? permissions.filter((item): item is AccessModule => typeof item === 'string')
     : position.permissions
@@ -83,6 +84,7 @@ positionsRouter.patch('/:positionId', requireRole(['admin']), async (request, re
     descripcion: descripcion === undefined ? position.descripcion
       : typeof descripcion === 'string' ? descripcion : position.descripcion,
     permissions: nextPermissions.length ? nextPermissions : position.permissions,
+    permissionLevels: permissionLevels && typeof permissionLevels === 'object' ? permissionLevels : position.permissionLevels,
     valorHora: typeof valorHora === 'number' ? valorHora : position.valorHora,
   })
 
