@@ -265,12 +265,73 @@ export default function TurnAssignmentsPage() {
   }>({ open: false, turn: null, action: null, previewUrl: null, photoData: null, capturing: false, locationCheck: null, checkingLocation: false })
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const [faceRegisterModal, setFaceRegisterModal] = useState(false)
+  const faceRegVideoRef = useRef<HTMLVideoElement>(null)
+  const faceRegStreamRef = useRef<MediaStream | null>(null)
+  const [faceRegPhoto, setFaceRegPhoto] = useState<string | null>(null)
+  const [faceRegLoading, setFaceRegLoading] = useState(false)
 
   // Detiene la cámara al cerrar el modal facial
   const stopFacialStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
   }
+
+  // ── Face registration modal handlers ──
+  const closeFaceRegisterModal = () => {
+    faceRegStreamRef.current?.getTracks().forEach((t) => t.stop())
+    faceRegStreamRef.current = null
+    setFaceRegisterModal(false)
+    setFaceRegPhoto(null)
+  }
+
+  const captureFaceRegPhoto = () => {
+    const video = faceRegVideoRef.current
+    if (!video) return
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+    setFaceRegPhoto(dataUrl)
+  }
+
+  const submitFaceRegistration = async () => {
+    const token = getCurrentToken()
+    if (!token || !faceRegPhoto) return
+    setFaceRegLoading(true)
+    try {
+      const base64 = faceRegPhoto.split(',')[1] ?? faceRegPhoto
+      await apiRequest('/attendance/register-face', {
+        method: 'POST', token,
+        body: { imageBase64: base64 },
+      })
+      setBiometricFeedback({ kind: 'success', message: 'Rostro registrado correctamente. Se usará para verificar tu identidad al marcar entrada.' })
+      closeFaceRegisterModal()
+    } catch (err) {
+      setBiometricFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error al registrar rostro.' })
+    } finally {
+      setFaceRegLoading(false)
+    }
+  }
+
+  // Inicia cámara para registro facial cuando se abre el modal
+  useEffect(() => {
+    if (!faceRegisterModal) return
+    let cancelled = false
+    const startCam = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return }
+        faceRegStreamRef.current = stream
+        if (faceRegVideoRef.current) faceRegVideoRef.current.srcObject = stream
+      } catch { /* camera not available */ }
+    }
+    void startCam()
+    return () => { cancelled = true; faceRegStreamRef.current?.getTracks().forEach((t) => t.stop()); faceRegStreamRef.current = null }
+  }, [faceRegisterModal])
 
   const loadTurns = async () => {
     const token = getCurrentToken()
@@ -782,6 +843,9 @@ export default function TurnAssignmentsPage() {
               </article>
               <Button type="button" icon="icon-fingerprint" onClick={() => void handleRegisterBiometric()} disabled={isBiometricBusy}>
                 {isBiometricBusy ? 'Registrando biometria...' : biometricStatus.biometricConfigured ? 'Actualizar biometria' : 'Registrar biometria'}
+              </Button>
+              <Button type="button" variant="ghost" icon="icon-user" onClick={() => setFaceRegisterModal(true)} disabled={isBiometricBusy}>
+                Registrar rostro facial
               </Button>
               {biometricFeedback.message ? (
                 <p className={biometricFeedback.kind === 'error' ? 'turn-table__error' : 'turn-table__success'}>
@@ -1581,6 +1645,43 @@ export default function TurnAssignmentsPage() {
             <Button type="button" variant="ghost" onClick={() => setShowCreateModal(false)}>Cancelar</Button>
             <Button type="button" onClick={() => void handleCreateAssignment()}>Guardar asignacion</Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Registrar rostro facial */}
+      <Modal
+        open={faceRegisterModal}
+        title="Registrar rostro facial"
+        description="Toma una foto clara de tu rostro. Se usará para verificar tu identidad al marcar entrada."
+        onClose={closeFaceRegisterModal}
+      >
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {!faceRegPhoto ? (
+            <>
+              <video
+                ref={faceRegVideoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{ width: '100%', borderRadius: 'var(--radius-lg)', background: '#000', aspectRatio: '4/3', objectFit: 'cover' }}
+              />
+              <Button type="button" variant="primary" onClick={captureFaceRegPhoto}>
+                <Icon name="icon-user" size={16} /> Tomar foto
+              </Button>
+            </>
+          ) : (
+            <>
+              <img src={faceRegPhoto} alt="Foto rostro" style={{ width: '100%', borderRadius: 'var(--radius-lg)', aspectRatio: '4/3', objectFit: 'cover' }} />
+              <div className="confirm-actions">
+                <Button type="button" variant="ghost" onClick={() => setFaceRegPhoto(null)}>
+                  Repetir foto
+                </Button>
+                <Button type="button" variant="primary" disabled={faceRegLoading} onClick={() => void submitFaceRegistration()}>
+                  {faceRegLoading ? 'Registrando...' : 'Confirmar y registrar'}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
     </div>
