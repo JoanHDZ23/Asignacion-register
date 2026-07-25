@@ -9,6 +9,7 @@ export type AuthSessionUser = {
   role: 'admin' | 'supervisor' | 'operativo'
   positionId?: string
   allowedModules?: AccessModule[]
+  permissionLevels?: Record<string, 'view' | 'edit'>
 }
 
 const CURRENT_USER_KEY = 'ommex_current_user'
