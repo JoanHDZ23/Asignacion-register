@@ -287,7 +287,7 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
 
   turn.estado = estado
 
-  // Confirmación del supervisor: solo es una firma/registro, NO cambia el estado
+  // Confirmación del supervisor o admin: solo es una firma/registro, NO cambia el estado
   if (estado === 'confirmado') {
     turn.confirmedByUserId = request.authUser!.userId
     turn.confirmedByUserName = currentUser?.nombreCompleto
@@ -560,4 +560,33 @@ turnsRouter.get('/my-hours', async (request, response) => {
       totalHoras: Math.round(totalHoras * 100) / 100,
     },
   })
+})
+
+/**
+ * GET /turns/rejected-report
+ * Devuelve todos los turnos rechazados con sus motivos y novedades.
+ */
+turnsRouter.get('/rejected-report', requireRole(['admin', 'supervisor']), async (request, response) => {
+  const db = await readDatabase()
+  const currentUser = db.users.find((u) => u.id === request.authUser!.userId)
+  const companyId = resolveCompanyIdForUser(db, currentUser)
+
+  const rejected = db.turns
+    .filter((t) => t.companyId === companyId && t.estado === 'rechazado')
+    .sort((a, b) => b.fecha.localeCompare(a.fecha))
+    .map((t) => ({
+      id: t.id,
+      titulo: t.titulo,
+      fecha: t.fecha,
+      hora: t.hora,
+      horaFin: t.horaFin,
+      assignedToUserName: t.assignedToUserName,
+      assignedToUserId: t.assignedToUserId,
+      locationNombre: t.locationNombre,
+      rejectionReason: t.rejectionReason,
+      novedades: t.novedades ?? [],
+      updatedAt: t.updatedAt,
+    }))
+
+  response.json({ total: rejected.length, rejected })
 })
