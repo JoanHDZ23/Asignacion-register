@@ -485,19 +485,8 @@ attendanceRouter.post('/verify-authentication', async (request, response) => {
     return
   }
 
-  // Salida bloqueada si el supervisor aún no confirmó el ingreso (flujo WebAuthn)
+  // Salida permitida siempre que haya checkIn registrado (ya no requiere confirmación para salir)
   const pendingAction = user.biometric.pendingAttendanceAction
-  if (pendingAction === 'salida' && turn.estado === 'en_proceso') {
-    const isSupervisorUser_ = user.role === 'supervisor'
-      || (user.role !== 'admin' && Boolean(user.cargo?.toLowerCase().includes('supervisor')))
-    if (!isSupervisorUser_ && user.role !== 'admin') {
-      response.status(403).json({
-        message: 'El supervisor debe confirmar tu ingreso antes de que puedas registrar la salida.',
-        code: 'CONFIRMATION_REQUIRED',
-      })
-      return
-    }
-  }
 
   if (!turn.locationId) {
     response.status(400).json({ message: 'El turno no tiene un punto operativo configurado.' })
@@ -652,18 +641,7 @@ attendanceRouter.post('/mark', async (request, response) => {
     return
   }
 
-  // Salida bloqueada si el supervisor aún no confirmó el ingreso
-  if (parsedAction === 'salida' && turn.estado === 'en_proceso') {
-    const isSupervisorUser_ = user.role === 'supervisor'
-      || (user.role !== 'admin' && Boolean(user.cargo?.toLowerCase().includes('supervisor')))
-    if (!isSupervisorUser_ && user.role !== 'admin') {
-      response.status(403).json({
-        message: 'El supervisor debe confirmar tu ingreso antes de que puedas registrar la salida.',
-        code: 'CONFIRMATION_REQUIRED',
-      })
-      return
-    }
-  }
+  // Salida: ya no requiere confirmación previa del supervisor para marcar
 
   // Para salida: construye un locationCheck pasivo (sin validar radio)
   let locationCheck: ReturnType<typeof buildLocationCheck> = null
