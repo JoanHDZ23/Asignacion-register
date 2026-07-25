@@ -303,12 +303,23 @@ export default function TurnAssignmentsPage() {
     if (!token || !faceRegPhoto) return
     setFaceRegLoading(true)
     try {
+      // Extract face descriptor (128 points) from the captured photo
+      const { extractFaceDescriptorFromBase64 } = await import('../lib/face-scan')
+      const descriptor = await extractFaceDescriptorFromBase64(faceRegPhoto)
+
+      if (!descriptor) {
+        setBiometricFeedback({ kind: 'error', message: 'No se detectó un rostro en la foto. Intenta de nuevo con mejor iluminación.' })
+        setFaceRegPhoto(null)
+        setFaceRegLoading(false)
+        return
+      }
+
       const base64 = faceRegPhoto.split(',')[1] ?? faceRegPhoto
       await apiRequest('/attendance/register-face', {
         method: 'POST', token,
-        body: { imageBase64: base64 },
+        body: { imageBase64: base64, faceDescriptor: Array.from(descriptor) },
       })
-      setBiometricFeedback({ kind: 'success', message: 'Rostro registrado correctamente. Se usará para verificar tu identidad al marcar entrada.' })
+      setBiometricFeedback({ kind: 'success', message: `Rostro escaneado y registrado (${descriptor.length} puntos faciales). Se verificará tu identidad al marcar entrada.` })
       closeFaceRegisterModal()
     } catch (err) {
       setBiometricFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error al registrar rostro.' })
@@ -719,6 +730,37 @@ export default function TurnAssignmentsPage() {
       }
 
       // ENTRADA: requiere foto + biometría (o solo ubicación si no hay biometría)
+      // ── Verificación facial local (compara descriptor) ──
+      if (action === 'entrada' && photoData?.base64) {
+        try {
+          const { extractFaceDescriptorFromBase64, compareFaceDescriptors } = await import('../lib/face-scan')
+          // Obtiene el descriptor registrado del usuario
+          const descResponse = await apiRequest<{ faceDescriptor: number[] }>('/attendance/face-descriptor', { token }).catch(() => null)
+
+          if (descResponse?.faceDescriptor) {
+            const currentDescriptor = await extractFaceDescriptorFromBase64(`data:image/jpeg;base64,${photoData.base64}`)
+
+            if (!currentDescriptor) {
+              setBiometricFeedback({ kind: 'error', message: 'No se detectó un rostro en la foto. Intenta de nuevo.' })
+              return
+            }
+
+            const comparison = compareFaceDescriptors(currentDescriptor, descResponse.faceDescriptor)
+
+            if (!comparison.match) {
+              setBiometricFeedback({
+                kind: 'error',
+                message: `⚠️ Verificación facial fallida — el rostro no coincide con el registrado (distancia: ${comparison.distance}, máx: ${comparison.threshold}). Intenta de nuevo o contacta al supervisor.`,
+              })
+              return
+            }
+          }
+          // Si no hay descriptor registrado, se permite (primera vez)
+        } catch {
+          // Si falla la verificación facial, continúa (degradación elegante)
+        }
+      }
+
       if (!biometricStatus.biometricConfigured) {
         const result = await apiRequest<VerifyAttendanceResponse>('/attendance/mark', {
           method: 'POST', token,
