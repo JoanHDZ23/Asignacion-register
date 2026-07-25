@@ -15,6 +15,8 @@ import { getCurrentToken, getCurrentUser } from '../lib/auth-storage'
 type TurnAssignment = {
   id: string
   fecha: string
+  hora: string
+  horaFin?: string
   horario: string
   titulo: string
   descripcion: string
@@ -23,7 +25,8 @@ type TurnAssignment = {
   ubicacion: string
   locationId?: string
   locationUrl?: string
-  confirmedDeadline?: string   // ISO — límite para confirmar
+  confirmedDeadline?: string
+  confirmedAt?: string           // ISO — cuando el supervisor aprobó
   estado: 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado'
   attendance?: TurnResponse['attendance']
 }
@@ -37,6 +40,8 @@ function mapTurns(response: TurnResponse[], locationMap: Map<string, LocationRes
     return {
       id: turn.id,
       fecha: turn.fecha,
+      hora: turn.hora,
+      horaFin: turn.horaFin,
       horario: turn.horaFin ? `${turn.hora} - ${turn.horaFin}` : turn.hora,
       titulo: turn.titulo,
       descripcion: turn.descripcion ?? '-',
@@ -46,6 +51,7 @@ function mapTurns(response: TurnResponse[], locationMap: Map<string, LocationRes
       locationId: turn.locationId,
       locationUrl,
       confirmedDeadline: turn.confirmedDeadline,
+      confirmedAt: (turn as any).confirmedAt,
       estado: turn.estado,
       attendance: turn.attendance,
     }
@@ -1044,28 +1050,50 @@ export default function TurnAssignmentsPage() {
                       ) : null}
 
                       {/* Marcar asistencia propia */}
-                      {(turn.estado === 'confirmado' || turn.estado === 'en_proceso') && pendingAction ? (
-                        pendingAction === 'salida' && turn.estado === 'en_proceso' ? (
-                          /* Salida bloqueada — esperando confirmación del supervisor */
-                          <div className="confirm-required-msg">
-                            <Icon name="icon-shield" size={13} />
-                            <span>Esperando confirmación del supervisor para marcar salida</span>
-                          </div>
-                        ) : (
-                          <Button
-                            type="button" size="sm"
-                            onClick={() => {
-                              if (pendingAction === 'salida') {
-                                void handleAttendanceVerification(turn, 'salida', null)
-                              } else {
-                                openFacialCapture(turn, pendingAction)
-                              }
-                            }}
-                            disabled={attendanceLoadingId === turn.id}
-                          >
-                            {attendanceLoadingId === turn.id ? 'Registrando...' : pendingAction === 'entrada' ? 'Marcar entrada' : 'Marcar salida'}
-                          </Button>
-                        )
+                      {(turn.estado === 'confirmado' || turn.estado === 'en_proceso' || turn.estado === 'asignado') && pendingAction ? (
+                        (() => {
+                          // ENTRADA: solo habilitado 30 min antes del inicio
+                          if (pendingAction === 'entrada') {
+                            const turnStartMs = new Date(`${turn.fecha}T${turn.hora}:00`).getTime()
+                            const windowOpenMs = turnStartMs - 30 * 60 * 1000
+                            const nowMs = Date.now()
+                            const canEntry = nowMs >= windowOpenMs
+                            const minsLeft = Math.max(0, Math.ceil((windowOpenMs - nowMs) / 60000))
+
+                            return canEntry ? (
+                              <Button type="button" size="sm"
+                                onClick={() => openFacialCapture(turn, 'entrada')}
+                                disabled={attendanceLoadingId === turn.id}>
+                                {attendanceLoadingId === turn.id ? 'Registrando...' : 'Marcar entrada'}
+                              </Button>
+                            ) : (
+                              <span style={{ fontSize: 12, color: 'var(--clr-text-2)' }}>
+                                Entrada en {minsLeft} min
+                              </span>
+                            )
+                          }
+
+                          // SALIDA: solo si supervisor aprobó
+                          if (pendingAction === 'salida') {
+                            if (!turn.confirmedAt) {
+                              return (
+                                <div className="confirm-required-msg">
+                                  <Icon name="icon-shield" size={13} />
+                                  <span>Esperando aprobación del supervisor</span>
+                                </div>
+                              )
+                            }
+                            return (
+                              <Button type="button" size="sm"
+                                onClick={() => void handleAttendanceVerification(turn, 'salida', null)}
+                                disabled={attendanceLoadingId === turn.id}>
+                                {attendanceLoadingId === turn.id ? 'Registrando...' : 'Marcar salida'}
+                              </Button>
+                            )
+                          }
+
+                          return null
+                        })()
                       ) : turn.estado === 'finalizado' || (turn.attendance?.checkIn && turn.attendance.checkOut) ? (
                         <span className="biometric-turn-item__done">Asistencia completa</span>
                       ) : null}
