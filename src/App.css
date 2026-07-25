@@ -1900,3 +1900,82 @@ button, input, textarea, select { font: inherit; }
     justify-content: flex-end;
   }
 }
+
+/* ─── Face Scanning UI ─────────────────────────────────────── */
+.face-scan-container {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #0a0a0a;
+  aspect-ratio: 4/3;
+}
+.face-scan-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+}
+.face-scan-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: scaleX(-1);
+}
+.face-scan-frame {
+  position: absolute;
+  inset: 12%;
+  border: 2px solid rgba(34, 197, 94, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: faceScanPulse 2s ease-in-out infinite;
+}
+@keyframes faceScanPulse {
+  0%, 100% { border-color: rgba(34, 197, 94, 0.3); transform: scale(1); }
+  50% { border-color: rgba(34, 197, 94, 0.7); transform: scale(1.02); }
+}
+.face-scan-hud {
+  position: absolute;
+  bottom: .75rem;
+  left: .75rem;
+  right: .75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.face-scan-status {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(0,0,0,0.7);
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+.face-scan-status--ok { color: #22c55e; }
+.face-scan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: faceDotBlink 1s ease-in-out infinite;
+}
+@keyframes faceDotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.face-scan-label {
+  font-size: 11px;
+  color: #22c55e;
+  background: rgba(0,0,0,0.7);
+  padding: .3rem .6rem;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}

@@ -270,6 +270,9 @@ export default function TurnAssignmentsPage() {
   const faceRegStreamRef = useRef<MediaStream | null>(null)
   const [faceRegPhoto, setFaceRegPhoto] = useState<string | null>(null)
   const [faceRegLoading, setFaceRegLoading] = useState(false)
+  const [faceDetected, setFaceDetected] = useState(false)
+  const [faceScanning, setFaceScanning] = useState(false)
+  const faceCanvasRef = useRef<HTMLCanvasElement>(null)
 
   // Detiene la cámara al cerrar el modal facial
   const stopFacialStream = () => {
@@ -332,16 +335,86 @@ export default function TurnAssignmentsPage() {
   useEffect(() => {
     if (!faceRegisterModal) return
     let cancelled = false
+    let animFrame = 0
     const startCam = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return }
         faceRegStreamRef.current = stream
         if (faceRegVideoRef.current) faceRegVideoRef.current.srcObject = stream
+        setFaceScanning(true)
+
+        // Start real-time face detection loop
+        const { loadFaceModels } = await import('../lib/face-scan')
+        await loadFaceModels()
+        const faceapi = await import('face-api.js')
+
+        const detectLoop = async () => {
+          if (cancelled) return
+          const video = faceRegVideoRef.current
+          const canvas = faceCanvasRef.current
+          if (!video || !canvas || video.readyState < 2) {
+            animFrame = requestAnimationFrame(() => void detectLoop())
+            return
+          }
+
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+
+          const detection = await faceapi
+            .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+            .withFaceLandmarks()
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+          if (detection) {
+            setFaceDetected(true)
+            // Draw face bounding box
+            const box = detection.detection.box
+            ctx.strokeStyle = '#22c55e'
+            ctx.lineWidth = 3
+            ctx.strokeRect(box.x, box.y, box.width, box.height)
+
+            // Draw landmark points
+            ctx.fillStyle = '#22c55e'
+            for (const point of detection.landmarks.positions) {
+              ctx.beginPath()
+              ctx.arc(point.x, point.y, 2.5, 0, Math.PI * 2)
+              ctx.fill()
+            }
+
+            // Draw scanning lines
+            ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)'
+            ctx.lineWidth = 1
+            const centerX = box.x + box.width / 2
+            const centerY = box.y + box.height / 2
+            for (let i = 0; i < 3; i++) {
+              const r = (box.width / 2) + (i * 15)
+              ctx.beginPath()
+              ctx.arc(centerX, centerY, r, 0, Math.PI * 2)
+              ctx.stroke()
+            }
+          } else {
+            setFaceDetected(false)
+          }
+
+          if (!cancelled) animFrame = requestAnimationFrame(() => void detectLoop())
+        }
+
+        void detectLoop()
       } catch { /* camera not available */ }
     }
     void startCam()
-    return () => { cancelled = true; faceRegStreamRef.current?.getTracks().forEach((t) => t.stop()); faceRegStreamRef.current = null }
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(animFrame)
+      faceRegStreamRef.current?.getTracks().forEach((t) => t.stop())
+      faceRegStreamRef.current = null
+      setFaceScanning(false)
+      setFaceDetected(false)
+    }
   }, [faceRegisterModal])
 
   const loadTurns = async () => {
@@ -1693,22 +1766,35 @@ export default function TurnAssignmentsPage() {
       {/* Modal: Registrar rostro facial */}
       <Modal
         open={faceRegisterModal}
-        title="Registrar rostro facial"
-        description="Toma una foto clara de tu rostro. Se usará para verificar tu identidad al marcar entrada."
+        title="Escaneo facial"
+        description="Posiciona tu rostro frente a la cámara. El sistema detectará los puntos faciales automáticamente."
         onClose={closeFaceRegisterModal}
       >
         <div style={{ display: 'grid', gap: '1rem' }}>
           {!faceRegPhoto ? (
             <>
-              <video
-                ref={faceRegVideoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{ width: '100%', borderRadius: 'var(--radius-lg)', background: '#000', aspectRatio: '4/3', objectFit: 'cover' }}
-              />
-              <Button type="button" variant="primary" onClick={captureFaceRegPhoto}>
-                <Icon name="icon-user" size={16} /> Tomar foto
+              <div className="face-scan-container">
+                <video
+                  ref={faceRegVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="face-scan-video"
+                />
+                <canvas ref={faceCanvasRef} className="face-scan-overlay" />
+                {faceScanning && (
+                  <div className="face-scan-hud">
+                    <div className={`face-scan-status ${faceDetected ? 'face-scan-status--ok' : ''}`}>
+                      <span className="face-scan-dot" />
+                      {faceDetected ? 'Rostro detectado' : 'Buscando rostro...'}
+                    </div>
+                    {faceDetected && <span className="face-scan-label">68 puntos faciales mapeados</span>}
+                  </div>
+                )}
+                <div className="face-scan-frame" />
+              </div>
+              <Button type="button" variant="primary" onClick={captureFaceRegPhoto} disabled={!faceDetected}>
+                <Icon name="icon-user" size={16} /> {faceDetected ? 'Capturar rostro' : 'Esperando detección...'}
               </Button>
             </>
           ) : (
@@ -1716,10 +1802,10 @@ export default function TurnAssignmentsPage() {
               <img src={faceRegPhoto} alt="Foto rostro" style={{ width: '100%', borderRadius: 'var(--radius-lg)', aspectRatio: '4/3', objectFit: 'cover' }} />
               <div className="confirm-actions">
                 <Button type="button" variant="ghost" onClick={() => setFaceRegPhoto(null)}>
-                  Repetir foto
+                  Repetir escaneo
                 </Button>
                 <Button type="button" variant="primary" disabled={faceRegLoading} onClick={() => void submitFaceRegistration()}>
-                  {faceRegLoading ? 'Registrando...' : 'Confirmar y registrar'}
+                  {faceRegLoading ? 'Procesando métricas faciales...' : 'Registrar rostro'}
                 </Button>
               </div>
             </>
