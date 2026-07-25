@@ -38,79 +38,97 @@ const accessModuleLabels: Record<AccessModule, string> = {
 }
 
 const accessModuleDescriptions: Record<AccessModule, string> = {
-  dashboard: 'Vista principal con resumen.',
-  'turnos-fijos': 'Control de entradas y salidas en horarios rígidos.',
-  'turnos-rotativos': 'Asignación dinámica de turnos por semana/mes.',
-  'horas-extras-recargos': 'Cálculo de recargos nocturnos, dominicales y festivos.',
-  geolocalizacion: 'Validación GPS contra puntos de operación.',
-  'permisos-ausencias': 'Gestión de licencias, vacaciones e incapacidades.',
-  'biometria-facial': 'Registro seguro con WebAuthn o foto facial.',
-  teletrabajo: 'Fichaje virtual desde cualquier ubicación.',
-  facturacion: 'Generación de cuentas de cobro por horas.',
-  informes: 'Consultar y exportar reportes.',
-  configuracion: 'Administrar cargos, ubicaciones y usuarios.',
-  'asistencia-clase': 'Pase de lista por asignatura.',
-  'codigo-qr': 'Código QR dinámico para confirmar presencia.',
-  'asistencia-docente': 'Verificación de horas cátedra.',
+  dashboard: 'Ver resumen y métricas del sistema.',
+  'turnos-fijos': 'Ver y marcar entrada/salida en turnos programados.',
+  'turnos-rotativos': 'Ver asignación dinámica de turnos por semana.',
+  'horas-extras-recargos': 'Ver y gestionar recargos dominicales y festivos.',
+  geolocalizacion: 'Aprobar ingresos y ver empleados en puntos operativos.',
+  'permisos-ausencias': 'Gestionar licencias, vacaciones e incapacidades.',
+  'biometria-facial': 'Marcar asistencia con verificación facial.',
+  teletrabajo: 'Fichar desde cualquier ubicación.',
+  facturacion: 'Generar cuentas de cobro por horas trabajadas.',
+  informes: 'Consultar reportes y exportar datos.',
+  configuracion: 'Crear cargos, ubicaciones, invitar y editar empleados.',
+  'asistencia-clase': 'Tomar pase de lista por asignatura.',
+  'codigo-qr': 'Escanear QR para confirmar presencia.',
+  'asistencia-docente': 'Verificar horas cátedra cumplidas.',
   'porcentaje-asistencia': 'Control de faltas para aprobación.',
-  justificaciones: 'Excusas médicas o institucionales.',
-  'alertas-inasistencia': 'Notificaciones por faltas consecutivas.',
-  'eventos-talleres': 'Control de actividades extracurriculares.',
+  justificaciones: 'Gestionar excusas médicas o institucionales.',
+  'alertas-inasistencia': 'Enviar alertas por faltas consecutivas.',
+  'eventos-talleres': 'Gestionar actividades extracurriculares.',
 }
 
-// ── Permisos clasificados por nivel de rol (empresa) ─────────────────────
+// ── Permisos clasificados por funcionalidad ──────────────────────────────────
 type PermissionGroup = {
   title: string
   description: string
-  tag: string // etiqueta de nivel
+  tag: string
   modules: AccessModule[]
 }
 
 const empresaPermissionGroups: PermissionGroup[] = [
   {
-    title: 'Operativo',
-    description: 'Permisos básicos para empleados de campo.',
-    tag: 'Empleado',
-    modules: ['dashboard', 'turnos-fijos', 'biometria-facial'],
+    title: 'Acceso básico',
+    description: 'Ver dashboard y marcar asistencia con biometría.',
+    tag: 'Todos',
+    modules: ['dashboard', 'biometria-facial'],
   },
   {
-    title: 'Supervisor',
-    description: 'Control de personal y validación de asistencia.',
+    title: 'Gestión de turnos',
+    description: 'Ver turnos asignados, confirmar asistencia, marcar entrada/salida.',
+    tag: 'Operativo',
+    modules: ['turnos-fijos', 'turnos-rotativos'],
+  },
+  {
+    title: 'Supervisión',
+    description: 'Aprobar ingresos, rechazar turnos, ver empleados en puntos operativos.',
     tag: 'Supervisor',
-    modules: ['geolocalizacion', 'turnos-rotativos', 'permisos-ausencias', 'informes'],
+    modules: ['geolocalizacion', 'permisos-ausencias'],
   },
   {
-    title: 'Analista / Facturación',
-    description: 'Gestión de horas, recargos y cuentas de cobro.',
+    title: 'Gestión de asistencia',
+    description: 'Ver historial de horas, generar cuentas de cobro, exportar reportes.',
     tag: 'Analista',
-    modules: ['horas-extras-recargos', 'facturacion', 'teletrabajo'],
+    modules: ['horas-extras-recargos', 'facturacion', 'informes'],
   },
   {
-    title: 'Gerencia / Administración',
-    description: 'Configuración total del sistema.',
-    tag: 'Gerencia',
+    title: 'Trabajo remoto',
+    description: 'Fichaje desde cualquier ubicación sin validación GPS.',
+    tag: 'Remoto',
+    modules: ['teletrabajo'],
+  },
+  {
+    title: 'Administración',
+    description: 'Crear cargos, ubicaciones, invitar empleados, editar configuración.',
+    tag: 'Admin',
     modules: ['configuracion'],
   },
 ]
 
 const academiaPermissionGroups: PermissionGroup[] = [
   {
-    title: 'Estudiante',
-    description: 'Permisos básicos para alumnos.',
-    tag: 'Estudiante',
-    modules: ['dashboard', 'codigo-qr', 'porcentaje-asistencia', 'justificaciones'],
+    title: 'Acceso básico',
+    description: 'Ver dashboard y código QR de asistencia.',
+    tag: 'Todos',
+    modules: ['dashboard', 'codigo-qr'],
   },
   {
-    title: 'Docente',
-    description: 'Control de asistencia en clases y eventos.',
+    title: 'Asistencia de clases',
+    description: 'Pase de lista, verificar horas cátedra, gestión de eventos.',
     tag: 'Docente',
     modules: ['asistencia-clase', 'asistencia-docente', 'eventos-talleres'],
   },
   {
-    title: 'Coordinación / Admin',
-    description: 'Alertas, informes y configuración institucional.',
+    title: 'Control académico',
+    description: 'Porcentaje de faltas, justificaciones, alertas por inasistencia.',
     tag: 'Coordinación',
-    modules: ['alertas-inasistencia', 'informes', 'configuracion'],
+    modules: ['porcentaje-asistencia', 'justificaciones', 'alertas-inasistencia'],
+  },
+  {
+    title: 'Administración',
+    description: 'Informes, exportar datos, configurar materias y horarios.',
+    tag: 'Admin',
+    modules: ['informes', 'configuracion'],
   },
 ]
 
