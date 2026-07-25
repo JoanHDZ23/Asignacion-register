@@ -2031,3 +2031,13 @@ button, input, textarea, select { font: inherit; }
 .access-picker__level--active {
   background: var(--clr-purple-light); border-color: var(--clr-purple-mid); color: var(--clr-purple-mid); font-weight: 600;
 }
+
+/* ─── WhatsApp variable insertion ──────────────────────────── */
+.wa-vars { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .4rem; align-items: center; }
+.wa-vars__label { font-size: 11px; color: var(--clr-text-2); font-weight: 500; }
+.wa-vars__btn {
+  font-size: 11px; padding: .2rem .5rem; border-radius: 999px;
+  border: 1px solid var(--clr-border); background: var(--clr-bg);
+  cursor: pointer; color: var(--clr-text-2); transition: all var(--transition);
+}
+.wa-vars__btn:hover { background: var(--clr-purple-light); border-color: var(--clr-purple-mid); color: var(--clr-purple-mid); }

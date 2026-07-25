@@ -714,17 +714,19 @@ export default function AttendanceAdminPage() {
       // Build WhatsApp notification link for the first worker with phone
       const loc = locations.find((l) => l.id === turnForm.locationId)
       const appUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard/asignacion-turnos` : ''
-      const message = `${turnForm.whatsappMsg}\n\n` +
-        `📍 ${loc?.nombre ?? turnForm.titulo}\n` +
-        `📅 ${turnForm.fecha}\n` +
-        `🕐 ${turnForm.hora}${turnForm.horaFin ? ` - ${turnForm.horaFin}` : ''}\n\n` +
-        `${appUrl}`
+      const message = turnForm.whatsappMsg
+        .replace(/\{ubicacion\}/g, loc?.nombre ?? turnForm.titulo)
+        .replace(/\{fecha\}/g, turnForm.fecha)
+        .replace(/\{hora\}/g, `${turnForm.hora}${turnForm.horaFin ? ' - ' + turnForm.horaFin : ''}`)
+        .replace(/\{link\}/g, appUrl)
+        + `\n\n📍 ${loc?.nombre ?? turnForm.titulo}\n📅 ${turnForm.fecha}\n🕐 ${turnForm.hora}${turnForm.horaFin ? ` - ${turnForm.horaFin}` : ''}`
 
       // Open WhatsApp for each worker that has a phone number
       for (const w of createdWorkers) {
         if (w.telefono) {
           const phone = w.telefono.replace(/\D/g, '').replace(/^0/, '57')
-          const waUrl = `https://wa.me/${phone.startsWith('57') ? phone : '57' + phone}?text=${encodeURIComponent(message)}`
+          const personalMsg = message.replace(/\{nombre\}/g, w.nombre.split(' ')[0] ?? w.nombre)
+          const waUrl = `https://wa.me/${phone.startsWith('57') ? phone : '57' + phone}?text=${encodeURIComponent(personalMsg)}`
           window.open(waUrl, '_blank')
         }
       }
@@ -1746,11 +1748,26 @@ export default function AttendanceAdminPage() {
             <span>Mensaje WhatsApp</span>
             <textarea
               className="custom-form__control custom-form__control--textarea"
-              rows={2}
+              rows={3}
               value={turnForm.whatsappMsg}
               onChange={(e) => setTurnForm((f) => ({ ...f, whatsappMsg: e.target.value }))}
               placeholder="Mensaje personalizado para notificar al empleado"
             />
+            <div className="wa-vars">
+              <span className="wa-vars__label">Insertar:</span>
+              {[
+                { label: '📍 Ubicación', value: '{ubicacion}' },
+                { label: '📅 Fecha', value: '{fecha}' },
+                { label: '🕐 Hora', value: '{hora}' },
+                { label: '👤 Empleado', value: '{nombre}' },
+                { label: '🔗 Link', value: '{link}' },
+              ].map((v) => (
+                <button key={v.value} type="button" className="wa-vars__btn"
+                  onClick={() => setTurnForm((f) => ({ ...f, whatsappMsg: f.whatsappMsg + ' ' + v.value }))}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
           </label>
 
           <div className="confirm-actions">
