@@ -1431,6 +1431,37 @@ button, input, textarea, select { font: inherit; }
 
   /* Cuenta de cobro */
   .billing-total-row td { padding: .6rem .75rem; }
+
+  /* Highlight strip */
+  .highlight-strip { flex-direction: column; gap: .4rem; }
+  .highlight-chip { min-width: 0; padding: .5rem .8rem; }
+
+  /* Content panels */
+  .content-panel { padding: .85rem; }
+  .content-panel__header { flex-direction: column; align-items: flex-start; gap: .4rem; }
+
+  /* Rejected turns */
+  .rejected-turns-list { gap: .4rem; }
+  .rejected-turn-item { padding: .6rem; }
+  .rejected-turn-item__header { flex-direction: column; align-items: flex-start; gap: .2rem; }
+
+  /* Personal info */
+  .personal-info-grid { grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .personal-info-item strong { font-size: 13px; }
+
+  /* Dashboard page header */
+  .page-header { flex-direction: column; gap: .75rem; align-items: flex-start; }
+  .dashboard-page__cta { align-self: stretch; }
+  .dashboard-page__cta .btn-primary { width: 100%; }
+
+  /* Turn form workers */
+  .turn-form__worker-list { max-height: 200px; }
+  .worker-chip { min-width: 100%; }
+
+  /* Access picker */
+  .access-picker__grid { grid-template-columns: 1fr 1fr; gap: .4rem; }
+  .access-picker__item { padding: .6rem; }
+  .access-picker__group { padding: .5rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1541,9 +1572,55 @@ button, input, textarea, select { font: inherit; }
 }
 
 @media (max-width: 640px) {
-  .grouped-turn-card__header { grid-template-columns: 1fr; gap: .6rem; }
+  .grouped-turn-card__header { grid-template-columns: 1fr; gap: .6rem; padding: .75rem; }
   .grouped-turn-card__stats { justify-self: flex-start; }
   .grouped-turn-card__actions-header { justify-self: flex-end; }
+  .grouped-turn-card__body { padding: .5rem; }
+  .grouped-turn-card__add { flex-direction: column; align-items: stretch; padding: .6rem; }
+  .add-employee-inline { flex-direction: column; }
+  .add-employee-inline select { width: 100%; }
+
+  /* Location group mobile */
+  .location-group__header { flex-direction: column; align-items: flex-start; gap: .4rem; padding: .5rem .6rem; }
+  .location-group__title { flex-wrap: wrap; }
+  .location-group__turnos { padding-left: 0; }
+
+  /* Section headers mobile */
+  .section-header { flex-direction: column; align-items: flex-start; gap: .4rem; }
+  .section-header > div { flex-wrap: wrap; }
+
+  /* Info cards grid */
+  .card-grid { grid-template-columns: 1fr; gap: .6rem; }
+  .info-card { padding: .85rem; }
+  .info-card__actions { flex-wrap: wrap; gap: .4rem; }
+  .info-card__actions button { flex: 1; min-width: 0; }
+
+  /* Filters */
+  .filters-row { flex-direction: column; gap: .5rem; }
+  .att-filter { width: 100%; }
+
+  /* Table responsive */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { min-width: 500px; }
+
+  /* Billing */
+  .billing-total-row td { font-size: 13px; }
+
+  /* Modals */
+  .modal__surface { max-width: 95vw; max-height: 90vh; }
+  .confirm-actions { flex-direction: column; }
+  .confirm-actions button { width: 100%; }
+
+  /* Dashboard signals */
+  .dashboard-signal-strip { flex-direction: column; }
+  .signal-chip { min-width: 0; flex: 1; }
+
+  /* Quick access */
+  .quick-link { padding: .75rem; }
+  .quick-link-desc { display: none; }
+
+  /* Hours modal summary */
+  .signal-chip strong { font-size: 1rem; }
 }
 
 /* ─── Agregar empleado al turno (inline) ─────────────────── */
