@@ -744,7 +744,8 @@ button, input, textarea, select { font: inherit; }
 .btn-clear:hover { background: var(--clr-bg); border-color: var(--clr-border-strong); }
 
 /* Biometric panel */
-.biometric-panel, .biometric-turn-list { display: grid; gap: .85rem; }
+.biometric-panel { display: grid; gap: .85rem; }
+.biometric-turn-list { display: flex; flex-wrap: wrap; gap: .75rem; }
 .biometric-panel__status {
   display: grid; gap: .3rem; padding: .9rem 1rem;
   border: 1px solid var(--clr-blue-light); border-radius: var(--radius-lg);
@@ -757,6 +758,7 @@ button, input, textarea, select { font: inherit; }
   gap: .75rem; padding: .9rem 1rem;
   border: 1px solid var(--clr-border); border-radius: var(--radius-lg);
   background: var(--clr-bg);
+  flex: 1 1 calc(50% - .75rem); min-width: 280px;
 }
 .biometric-turn-item__meta, .biometric-turn-item__actions { display: grid; gap: .3rem; }
 .biometric-turn-item__meta strong { color: var(--clr-text); font-size: 14px; }
@@ -768,7 +770,7 @@ button, input, textarea, select { font: inherit; }
   display: flex; gap: .375rem; flex-wrap: wrap; justify-content: flex-end;
 }
 @media (max-width: 640px) {
-  .biometric-turn-item { grid-template-columns: 1fr; gap: .5rem; padding: .75rem; }
+  .biometric-turn-item { flex: 1 1 100%; min-width: 0; grid-template-columns: 1fr; gap: .5rem; padding: .75rem; }
   .biometric-turn-item__actions { justify-items: stretch; gap: .4rem; }
   .biometric-turn-item__confirm { flex-direction: column; }
   .biometric-turn-item__confirm button { width: 100%; min-height: 44px; }
