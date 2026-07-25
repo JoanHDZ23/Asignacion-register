@@ -471,15 +471,16 @@ export default function TurnAssignmentsPage() {
     [myTurns]
   )
 
-  // Compañeros de operación: turnos en las mismas ubicaciones del supervisor, excluyendo los suyos
+  // Compañeros de operación: turnos en las mismas ubicaciones del supervisor (incluye los suyos)
   const operationTurns = useMemo(() => {
     if (!isSupervisor) return []
-    // Si tiene ubicaciones asignadas, filtra por ellas; si no, muestra todos
-    const base = supervisorLocationIds.size > 0
-      ? turns.filter((t) => t.locationId && supervisorLocationIds.has(t.locationId))
-      : turns
-    return base.filter((t) => t.assignedToUserId !== currentUserId)
-  }, [isSupervisor, turns, currentUserId, supervisorLocationIds])
+    // Filtra por las ubicaciones asignadas al supervisor
+    if (supervisorLocationIds.size > 0) {
+      return turns.filter((t) => t.locationId && supervisorLocationIds.has(t.locationId))
+    }
+    // Si no tiene ubicaciones asignadas, muestra solo sus propios turnos
+    return myTurns
+  }, [isSupervisor, turns, myTurns, supervisorLocationIds])
 
   // Turnos filtrados para la tabla general (admin y supervisor)
   const filteredTurns = useMemo(() => turns.filter((turn) => {

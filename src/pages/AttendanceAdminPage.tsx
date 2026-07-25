@@ -1310,6 +1310,11 @@ export default function AttendanceAdminPage() {
                 <Button type="button" size="sm" variant="ghost" onClick={() => setDetailWorkerId(w.id)}>
                   <Icon name="icon-eye" size={13} /> Ver detalles
                 </Button>
+                {w.telefono && (
+                  <a href={`tel:${w.telefono}`} className="btn btn--sm btn--ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', textDecoration: 'none' }}>
+                    <Icon name="icon-link" size={13} /> Llamar
+                  </a>
+                )}
                 {currentUser?.role === 'admin' && (
                   <>
                     <Button type="button" size="sm" variant="ghost" onClick={() => { setEditingWorker(w); setActiveModal('worker-edit') }}>

@@ -753,19 +753,26 @@ button, input, textarea, select { font: inherit; }
 .biometric-panel__status strong { color: var(--clr-text); font-size: 13.5px; }
 .biometric-panel__status span   { color: var(--clr-text-2); font-size: 12.5px; line-height: 1.5; }
 .biometric-turn-item {
-  display: grid; grid-template-columns: 1fr auto; align-items: center;
-  gap: .9rem; padding: .9rem 1rem;
+  display: grid; grid-template-columns: 1fr auto; align-items: start;
+  gap: .75rem; padding: .9rem 1rem;
   border: 1px solid var(--clr-border); border-radius: var(--radius-lg);
   background: var(--clr-bg);
 }
-.biometric-turn-item__meta, .biometric-turn-item__actions { display: grid; gap: .25rem; }
-.biometric-turn-item__meta strong { color: var(--clr-text); font-size: 13.5px; }
-.biometric-turn-item__meta span   { color: var(--clr-text-2); font-size: 12px; }
-.biometric-turn-item__actions { justify-items: end; }
+.biometric-turn-item__meta, .biometric-turn-item__actions { display: grid; gap: .3rem; }
+.biometric-turn-item__meta strong { color: var(--clr-text); font-size: 14px; }
+.biometric-turn-item__meta span   { color: var(--clr-text-2); font-size: 12.5px; line-height: 1.4; }
+.biometric-turn-item__actions { justify-items: end; gap: .4rem; }
 .biometric-turn-item__done { color: var(--clr-green); font-size: 12.5px; font-weight: 600; }
 /* Fila de botones confirmar/rechazar dentro de la tarjeta del turno */
 .biometric-turn-item__confirm {
   display: flex; gap: .375rem; flex-wrap: wrap; justify-content: flex-end;
+}
+@media (max-width: 640px) {
+  .biometric-turn-item { grid-template-columns: 1fr; gap: .5rem; padding: .75rem; }
+  .biometric-turn-item__actions { justify-items: stretch; gap: .4rem; }
+  .biometric-turn-item__confirm { flex-direction: column; }
+  .biometric-turn-item__confirm button { width: 100%; min-height: 44px; }
+  .biometric-turn-list { gap: .5rem; }
 }
 
 /* Turn status (used in table) */
