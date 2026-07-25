@@ -14,7 +14,7 @@ import { type AccessModule } from '../lib/access'
 import { getCurrentToken, getCurrentUser, setCurrentUser } from '../lib/auth-storage'
 
 type FeedbackState = { kind: 'idle' | 'success' | 'error'; message?: string }
-type ActiveModal = 'employee' | 'position' | 'location' | 'location-edit' | 'location-delete' | 'turn' | 'turn-delete' | 'turn-edit' | 'worker-edit' | 'worker-delete' | null
+type ActiveModal = 'employee' | 'position' | 'location' | 'location-edit' | 'location-delete' | 'turn' | 'turn-delete' | 'turn-edit' | 'worker-edit' | 'worker-delete' | 'reports' | null
 
 const accessModuleLabels: Record<AccessModule, string> = {
   dashboard: 'Inicio',
@@ -192,6 +192,7 @@ export default function AttendanceAdminPage() {
   // Multi-employee turn form state
   const [turnForm, setTurnForm] = useState({
     titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4',
+    whatsappMsg: '🔔 *Nuevo turno asignado*\n\nIngresa para confirmar tu asistencia.',
   })
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([])
   const [turnConflicts, setTurnConflicts] = useState<string[]>([])
@@ -711,11 +712,11 @@ export default function AttendanceAdminPage() {
       // Build WhatsApp notification link for the first worker with phone
       const loc = locations.find((l) => l.id === turnForm.locationId)
       const appUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard/asignacion-turnos` : ''
-      const message = `🔔 *Nuevo turno asignado*\n\n` +
+      const message = `${turnForm.whatsappMsg}\n\n` +
         `📍 ${loc?.nombre ?? turnForm.titulo}\n` +
         `📅 ${turnForm.fecha}\n` +
         `🕐 ${turnForm.hora}${turnForm.horaFin ? ` - ${turnForm.horaFin}` : ''}\n\n` +
-        `Ingresa para confirmar tu asistencia:\n${appUrl}`
+        `${appUrl}`
 
       // Open WhatsApp for each worker that has a phone number
       for (const w of createdWorkers) {
@@ -733,7 +734,7 @@ export default function AttendanceAdminPage() {
           : `${created} turno(s) "${turnForm.titulo}" registrados. ${createdWorkers.filter((w) => w.telefono).length ? 'Notificaciones WhatsApp enviadas.' : ''}`,
       })
       setActiveModal(null)
-      setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4' })
+      setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4', whatsappMsg: '🔔 *Nuevo turno asignado*\n\nIngresa para confirmar tu asistencia.' })
       setSelectedWorkerIds([])
       setTurnConflicts([])
       await loadAdminData()
@@ -879,7 +880,7 @@ export default function AttendanceAdminPage() {
   }
 
   const resetTurnModal = () => {
-    setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4' })
+    setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4', whatsappMsg: '🔔 *Nuevo turno asignado*\n\nIngresa para confirmar tu asistencia.' })
     setSelectedWorkerIds([])
     setTurnConflicts([])
     setActiveModal(null)
@@ -924,9 +925,14 @@ export default function AttendanceAdminPage() {
           <h1>Gestion de asistencia</h1>
           <p>Verifica el ingreso y seguimiento operativo en tiempo real.</p>
         </div>
-        <div className="pg__clock">
-          <span>Hora actual</span>
-          <strong>{currentTimeLabel}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setActiveModal('reports')}>
+            <Icon name="icon-activity" size={16} /> Reportes
+          </Button>
+          <div className="pg__clock">
+            <span>Hora actual</span>
+            <strong>{currentTimeLabel}</strong>
+          </div>
         </div>
       </div>
 
@@ -945,36 +951,49 @@ export default function AttendanceAdminPage() {
         ))}
       </div>
 
-      {/* Quick actions — admin: all actions, supervisor: only invite */}
-      {(currentUser?.role === 'admin' || isSupervisor) && (
-      <div className="pg__section">
-        <div className="section-header">
-          <h2>Acciones rapidas</h2>
-        </div>
-        <div className="action-grid">
-          <button className="action-btn action-btn--primary" type="button" onClick={() => setActiveModal('employee')}>
-            <Icon name="icon-link" size={18} />
-            <span>Invitar empleado</span>
-          </button>
-          {currentUser?.role === 'admin' && (
-            <>
-              <button className="action-btn" type="button" onClick={() => { setEditingPosition(null); setPositionPermissions(['dashboard', 'turnos-fijos']); setActiveModal('position') }}>
-                <Icon name="icon-briefcase" size={18} />
-                <span>Registrar cargo</span>
-              </button>
-              <button className="action-btn" type="button" onClick={() => setActiveModal('location')}>
-                <Icon name="icon-map-pin" size={18} />
-                <span>Registrar ubicacion</span>
-              </button>
-              <button className="action-btn action-btn--accent" type="button" onClick={() => setActiveModal('turn')}>
-                <Icon name="icon-calendar" size={18} />
-                <span>Crear turno</span>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      )}
+      {/* Quick actions — each action controlled by permission level */}
+      {(() => {
+        const levels = currentUser?.permissionLevels ?? {}
+        const canInvite = levels['configuracion'] === 'edit' || levels['configuracion'] === 'full' || currentUser?.role === 'admin' || isSupervisor
+        const canCreatePosition = levels['configuracion'] === 'full' || currentUser?.role === 'admin'
+        const canCreateLocation = levels['configuracion'] === 'full' || levels['configuracion'] === 'edit' || currentUser?.role === 'admin'
+        const canCreateTurn = levels['turnos-fijos'] === 'edit' || levels['turnos-fijos'] === 'full' || currentUser?.role === 'admin'
+        const showActions = canInvite || canCreatePosition || canCreateLocation || canCreateTurn
+
+        return showActions ? (
+          <div className="pg__section">
+            <div className="section-header">
+              <h2>Acciones rapidas</h2>
+            </div>
+            <div className="action-grid">
+              {canInvite && (
+                <button className="action-btn action-btn--primary" type="button" onClick={() => setActiveModal('employee')}>
+                  <Icon name="icon-link" size={18} />
+                  <span>Invitar empleado</span>
+                </button>
+              )}
+              {canCreatePosition && (
+                <button className="action-btn" type="button" onClick={() => { setEditingPosition(null); setPositionPermissions(['dashboard', 'turnos-fijos']); setActiveModal('position') }}>
+                  <Icon name="icon-briefcase" size={18} />
+                  <span>Registrar cargo</span>
+                </button>
+              )}
+              {canCreateLocation && (
+                <button className="action-btn" type="button" onClick={() => setActiveModal('location')}>
+                  <Icon name="icon-map-pin" size={18} />
+                  <span>Registrar ubicacion</span>
+                </button>
+              )}
+              {canCreateTurn && (
+                <button className="action-btn action-btn--accent" type="button" onClick={() => setActiveModal('turn')}>
+                  <Icon name="icon-calendar" size={18} />
+                  <span>Crear turno</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null
+      })()}
 
       {/* Feedback banners */}
       {invitationFeedback.message && (
@@ -1700,6 +1719,18 @@ export default function AttendanceAdminPage() {
             )}
           </div>
 
+          {/* WhatsApp message customization */}
+          <label className="turn-form__field turn-form__field--full" style={{ marginTop: '.5rem' }}>
+            <span>Mensaje WhatsApp</span>
+            <textarea
+              className="custom-form__control custom-form__control--textarea"
+              rows={2}
+              value={turnForm.whatsappMsg}
+              onChange={(e) => setTurnForm((f) => ({ ...f, whatsappMsg: e.target.value }))}
+              placeholder="Mensaje personalizado para notificar al empleado"
+            />
+          </label>
+
           <div className="confirm-actions">
             <Button type="button" variant="ghost" onClick={resetTurnModal}>Cancelar</Button>
             <Button type="button" variant="primary" onClick={() => void handleCreateTurnsForMultiple()}
@@ -1722,6 +1753,34 @@ export default function AttendanceAdminPage() {
           <Button type="button" variant="primary" className="btn-danger" onClick={() => void handleDeleteTurn()}>
             <Icon name="icon-x-circle" size={16} /> Eliminar turno
           </Button>
+        </div>
+      </Modal>
+
+      {/* Modal: Reportes — turnos rechazados y novedades */}
+      <Modal
+        open={activeModal === 'reports'}
+        title="Reportes"
+        description="Historial de turnos rechazados y novedades reportadas."
+        onClose={() => setActiveModal(null)}
+      >
+        <div style={{ display: 'grid', gap: '.75rem', maxHeight: 450, overflow: 'auto' }}>
+          {turns.filter((t) => t.estado === 'rechazado').length > 0 ? (
+            turns.filter((t) => t.estado === 'rechazado').sort((a, b) => b.fecha.localeCompare(a.fecha)).map((t) => (
+              <div key={t.id} className="rejected-turn-item">
+                <div className="rejected-turn-item__header">
+                  <strong>{t.assignedToUserName ?? 'Empleado'}</strong>
+                  <span>{t.fecha} · {t.hora}{t.horaFin ? ` – ${t.horaFin}` : ''}</span>
+                  <span className="rejected-turn-item__location"><Icon name="icon-map-pin" size={12} /> {t.locationNombre ?? '—'}</span>
+                </div>
+                <div className="rejected-turn-item__reason">
+                  <Icon name="icon-x-circle" size={13} />
+                  <span>{t.rejectionReason ?? 'Sin motivo registrado'}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p style={{ textAlign: 'center', color: 'var(--clr-text-2)', padding: '1rem' }}>No hay turnos rechazados.</p>
+          )}
         </div>
       </Modal>
 
