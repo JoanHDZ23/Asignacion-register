@@ -198,9 +198,12 @@ export default function AttendanceAdminPage() {
   const loadAdminData = async () => {
     if (!token) return
     try {
-      // Admin y supervisor usan /management. Otros roles usan /turns
+      // Admin, supervisor, y cargos con módulos de gestión usan /management
       const isManagement = currentUser?.role === 'admin' || currentUser?.role === 'supervisor'
         || currentUser?.cargo?.toLowerCase().includes('supervisor')
+        || currentUser?.allowedModules?.some((m) =>
+          ['geolocalizacion', 'facturacion', 'horas-extras-recargos', 'informes', 'configuracion', 'porcentaje-asistencia'].includes(m)
+        )
 
       if (isManagement) {
         const response = await apiRequest<CompanyManagementResponse>('/companies/management', { token })
@@ -868,7 +871,7 @@ export default function AttendanceAdminPage() {
   const hasAccess = currentUser?.role === 'admin'
     || currentUser?.role === 'supervisor'
     || currentUser?.allowedModules?.some((m) =>
-      ['geolocalizacion', 'porcentaje-asistencia', 'facturacion', 'informes', 'configuracion'].includes(m)
+      ['geolocalizacion', 'porcentaje-asistencia', 'facturacion', 'horas-extras-recargos', 'informes', 'configuracion', 'turnos-fijos', 'turnos-rotativos'].includes(m)
     )
     || currentUser?.cargo?.toLowerCase().includes('supervisor')
 
