@@ -157,7 +157,7 @@ export type Company = {
   createdAt: string
 }
 
-export type PermissionLevel = 'view' | 'edit'
+export type PermissionLevel = 'none' | 'view' | 'edit' | 'full'
 
 export type Position = {
   id: string

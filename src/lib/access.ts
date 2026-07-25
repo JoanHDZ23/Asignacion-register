@@ -1,4 +1,4 @@
-import type { AccessModule, CompanySettings, CompanyType, DatabaseSchema, User } from '../types.js'
+import type { AccessModule, CompanySettings, CompanyType, DatabaseSchema, PermissionLevel, User } from '../types.js'
 import { defaultPermissionsByRole } from '../types.js'
 
 // ── Módulos por defecto según tipo de gestión ──────────────────────────
@@ -108,16 +108,19 @@ export function resolveAllowedModules(db: DatabaseSchema, user: User): AccessMod
 }
 
 /**
- * Resuelve los niveles de permiso (view/edit) para cada módulo del usuario.
- * Admin siempre tiene 'edit' en todo. Los demás dependen del cargo.
+ * Resuelve los niveles de permiso (none/view/edit/full) para cada módulo del usuario.
+ * - Admin: siempre 'full'
+ * - Supervisor: 'edit' (puede aprobar/rechazar) 
+ * - Operativo: 'view' (solo ver y marcar asistencia)
+ * - Custom: según permissionLevels del cargo
  */
-export function resolvePermissionLevels(db: DatabaseSchema, user: User): Record<string, 'view' | 'edit'> {
+export function resolvePermissionLevels(db: DatabaseSchema, user: User): Record<string, PermissionLevel> {
   const modules = resolveAllowedModules(db, user)
-  const levels: Record<string, 'view' | 'edit'> = {}
+  const levels: Record<string, PermissionLevel> = {}
 
-  // Admin: siempre edit en todo
+  // Admin: full en todo
   if (user.role === 'admin') {
-    for (const m of modules) levels[m] = 'edit'
+    for (const m of modules) levels[m] = 'full'
     return levels
   }
 
@@ -126,13 +129,25 @@ export function resolvePermissionLevels(db: DatabaseSchema, user: User): Record<
     ? db.positions.find((item) => item.id === user.positionId && item.companyId === user.companyId)
     : undefined
 
+  const isSup = user.role === 'supervisor' || Boolean(user.cargo?.toLowerCase().includes('supervisor'))
+
   for (const m of modules) {
     if (position?.permissionLevels?.[m]) {
-      levels[m] = position.permissionLevels[m]
+      levels[m] = position.permissionLevels[m] as PermissionLevel
     } else {
-      // Por defecto: supervisor puede editar turnos e informes, operativo solo ve
-      const isSup = user.role === 'supervisor' || user.cargo?.toLowerCase().includes('supervisor')
-      levels[m] = isSup ? 'edit' : 'view'
+      // Defaults por rol:
+      // - configuracion: solo admin tiene full
+      // - geolocalizacion, permisos-ausencias: supervisor edit, otros view
+      // - turnos-fijos, biometria-facial: todos al menos view
+      if (m === 'configuracion') {
+        levels[m] = 'view'
+      } else if (['geolocalizacion', 'permisos-ausencias', 'horas-extras-recargos', 'facturacion'].includes(m)) {
+        levels[m] = isSup ? 'edit' : 'view'
+      } else if (['informes'].includes(m)) {
+        levels[m] = 'view'
+      } else {
+        levels[m] = isSup ? 'edit' : 'view'
+      }
     }
   }
 
