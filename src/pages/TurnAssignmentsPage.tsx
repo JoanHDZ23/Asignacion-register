@@ -474,16 +474,16 @@ export default function TurnAssignmentsPage() {
     [myTurns]
   )
 
-  // Compañeros de operación: turnos en las mismas ubicaciones del supervisor (incluye los suyos)
+  // Turnos para el panel de confirmación (supervisor ve los de su ubicación, admin ve todos)
   const operationTurns = useMemo(() => {
+    if (isAdmin) return turns // Admin ve todos
     if (!isSupervisor) return []
     // Filtra por las ubicaciones asignadas al supervisor
     if (supervisorLocationIds.size > 0) {
       return turns.filter((t) => t.locationId && supervisorLocationIds.has(t.locationId))
     }
-    // Si no tiene ubicaciones asignadas, muestra solo sus propios turnos
     return myTurns
-  }, [isSupervisor, turns, myTurns, supervisorLocationIds])
+  }, [isAdmin, isSupervisor, turns, myTurns, supervisorLocationIds])
 
   // Turnos filtrados para la tabla general (admin y supervisor)
   const filteredTurns = useMemo(() => turns.filter((turn) => {
@@ -1095,8 +1095,8 @@ export default function TurnAssignmentsPage() {
         </section>
       ) : null}
 
-      {/* Panel supervisor — turnos agrupados por ubicación con confirmación */}
-      {isSupervisor ? (
+      {/* Panel confirmación — supervisor y admin pueden aprobar ingreso */}
+      {(isSupervisor || isAdmin) ? (
         <section className="content-panel supervisor-panel">
           <header className="content-panel__header">
             <div>
