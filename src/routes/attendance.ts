@@ -641,7 +641,31 @@ attendanceRouter.post('/mark', async (request, response) => {
     return
   }
 
-  // Salida: ya no requiere confirmación previa del supervisor para marcar
+  // ── ENTRADA: solo permite 30 min antes de la hora de inicio ──
+  if (parsedAction === 'entrada') {
+    const turnStartMs = new Date(`${turn.fecha}T${turn.hora}:00`).getTime()
+    const windowOpenMs = turnStartMs - 30 * 60 * 1000 // 30 min antes
+    const now = Date.now()
+    if (now < windowOpenMs) {
+      const minsLeft = Math.ceil((windowOpenMs - now) / 60000)
+      response.status(403).json({
+        message: `La entrada se habilita 30 minutos antes del inicio del turno. Faltan ${minsLeft} min.`,
+        code: 'ENTRY_TOO_EARLY',
+      })
+      return
+    }
+  }
+
+  // ── SALIDA: solo permite si el supervisor ya aprobó el ingreso ──
+  if (parsedAction === 'salida') {
+    if (!turn.confirmedAt) {
+      response.status(403).json({
+        message: 'El supervisor debe aprobar tu ingreso antes de que puedas marcar salida.',
+        code: 'AWAITING_APPROVAL',
+      })
+      return
+    }
+  }
 
   // Para salida: construye un locationCheck pasivo (sin validar radio)
   let locationCheck: ReturnType<typeof buildLocationCheck> = null
@@ -712,9 +736,15 @@ attendanceRouter.post('/mark', async (request, response) => {
       })
     : null
 
+  // ENTRADA: se registra con la hora de inicio del turno (no la hora real)
+  // SALIDA: se registra con la hora real del momento
+  const markedAt = parsedAction === 'entrada'
+    ? new Date(`${turn.fecha}T${turn.hora}:00`).toISOString()
+    : new Date().toISOString()
+
   const attendanceRecord: AttendanceRecord = {
     action: parsedAction,
-    markedAt: new Date().toISOString(),
+    markedAt,
     method: 'pin',
     credentialId: 'none',
     locationCheck: finalLocationCheck,
