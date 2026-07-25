@@ -1,4 +1,4 @@
-import { startAuthentication, startRegistration } from '@simplewebauthn/browser'
+import { startAuthentication } from '@simplewebauthn/browser'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Icon, Modal } from '../components'
 import {
@@ -9,7 +9,6 @@ import {
   type TurnResponse,
   type UserResponse,
   type VerifyAttendanceResponse,
-  type VerifyBiometricRegistrationResponse,
 } from '../lib/api'
 import { getCurrentToken, getCurrentUser } from '../lib/auth-storage'
 
@@ -218,7 +217,6 @@ export default function TurnAssignmentsPage() {
     credentialCount: 0,
   })
   const [biometricFeedback, setBiometricFeedback] = useState<BiometricFeedback>({ kind: 'idle' })
-  const [isBiometricBusy, setIsBiometricBusy] = useState(false)
   const [attendanceLoadingId, setAttendanceLoadingId] = useState<string | null>(null)
   const [statusLoadingId, setStatusLoadingId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -655,31 +653,6 @@ export default function TurnAssignmentsPage() {
     }
     if (errors.length) setError(`No se pudo crear turno para: ${errors.join(', ')}.`)
     else setError(null)
-  }
-
-  const handleRegisterBiometric = async () => {
-    const token = getCurrentToken()
-    if (!token) return
-    if (!window.PublicKeyCredential) {
-      setBiometricFeedback({ kind: 'error', message: 'Este dispositivo no soporta autenticacion biometrica WebAuthn.' })
-      return
-    }
-    setIsBiometricBusy(true)
-    setBiometricFeedback({ kind: 'idle' })
-    try {
-      const options = await apiRequest<Parameters<typeof startRegistration>[0]['optionsJSON']>(
-        '/attendance/generate-registration-options', { method: 'POST', token })
-      const responseJSON = await startRegistration({ optionsJSON: options })
-      const result = await apiRequest<VerifyBiometricRegistrationResponse>(
-        '/attendance/verify-registration', { method: 'POST', token, body: { responseJSON } })
-      setBiometricStatus({ biometricConfigured: result.biometricConfigured, credentialCount: result.credentialCount })
-      setBiometricFeedback({ kind: 'success', message: 'Biometria registrada correctamente. Ya puedes marcar asistencia.' })
-    } catch (err) {
-      const isCancelled = err instanceof Error && (err.name === 'NotAllowedError' || err.message.toLowerCase().includes('not allowed'))
-      setBiometricFeedback({ kind: isCancelled ? 'idle' : 'error', message: isCancelled ? undefined : (err instanceof Error ? err.message : 'No fue posible registrar la biometria.') })
-    } finally {
-      setIsBiometricBusy(false)
-    }
   }
 
   /** Abre el modal de cámara; el stream se inicia en el useEffect cuando el <video> ya está en el DOM. */
