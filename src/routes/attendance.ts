@@ -9,6 +9,7 @@ import {
 } from '@simplewebauthn/server'
 import { Router } from 'express'
 import { readDatabase, readLocalUser, updateTurn, updateUser, updateUserLocal, uploadFacialPhoto } from '../lib/database.js'
+import { registerFace, verifyFace } from '../lib/face-recognition.js'
 import { requireAuth } from '../middleware/auth.js'
 import type {
   AttendanceAction,
@@ -708,6 +709,19 @@ attendanceRouter.post('/mark', async (request, response) => {
     verifiedAt:         new Date().toISOString(),
   }
 
+  // ── Verificación facial con DeepFace (solo en entrada y si hay foto) ──
+  if (parsedAction === 'entrada' && photoBase64) {
+    const faceResult = await verifyFace(user.id, photoBase64)
+    if (!faceResult.verified) {
+      response.status(403).json({
+        message: faceResult.message ?? 'La verificación facial falló. El rostro no coincide con el registrado.',
+        code: 'FACE_VERIFICATION_FAILED',
+        distance: faceResult.distance,
+      })
+      return
+    }
+  }
+
   const facialPhotoUrl = photoBase64
     ? await uploadFacialPhoto({
         userId:      user.id,
@@ -749,6 +763,44 @@ attendanceRouter.post('/mark', async (request, response) => {
     turn,
     attendance: attendanceRecord,
   })
+})
+
+/**
+ * POST /attendance/register-face
+ * Registra el rostro del usuario para verificación facial futura.
+ */
+attendanceRouter.post('/register-face', async (request, response) => {
+  const { imageBase64 } = request.body as { imageBase64?: string }
+
+  if (!imageBase64) {
+    response.status(400).json({ message: 'La imagen facial es requerida.' })
+    return
+  }
+
+  const user = await readLocalUser(request.authUser!.userId)
+  if (!user) {
+    response.status(404).json({ message: 'Usuario no encontrado.' })
+    return
+  }
+
+  const result = await registerFace(user.id, imageBase64)
+
+  if (!result.success) {
+    response.status(400).json({ message: result.error ?? 'Error al registrar el rostro.' })
+    return
+  }
+
+  response.json({ success: true, message: 'Rostro registrado correctamente para verificación facial.' })
+})
+
+/**
+ * GET /attendance/face-status
+ * Verifica si el servicio facial está disponible.
+ */
+attendanceRouter.get('/face-status', async (_request, response) => {
+  const { isFaceServiceAvailable } = await import('../lib/face-recognition.js')
+  const available = await isFaceServiceAvailable()
+  response.json({ available, serviceUrl: process.env.FACE_SERVICE_URL ? 'configured' : 'not_configured' })
 })
 
 export { attendanceRouter }
