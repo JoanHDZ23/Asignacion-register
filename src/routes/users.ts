@@ -216,10 +216,21 @@ usersRouter.patch('/:userId', adminOnly, async (request, response) => {
   if (numeroDocumento !== undefined) user.numeroDocumento = String(numeroDocumento)
   if (correo !== undefined)         user.correo         = String(correo)
   if (telefono !== undefined)       user.telefono       = telefono ? String(telefono) : undefined
-  if (cargo !== undefined)          user.cargo          = String(cargo)
   if (role !== undefined)           user.role           = role
-  if (positionId !== undefined)     user.positionId     = positionId || undefined
   if (activa !== undefined)         user.activa         = Boolean(activa)
+
+  // Al cambiar positionId, actualiza automáticamente el cargo con el nombre de la posición
+  if (positionId !== undefined) {
+    user.positionId = positionId || undefined
+    if (positionId) {
+      const position = db.positions.find((p) => p.id === positionId && p.companyId === companyId)
+      if (position) {
+        user.cargo = position.nombre
+      }
+    }
+  } else if (cargo !== undefined) {
+    user.cargo = String(cargo)
+  }
 
   await updateUser(user)
   response.json(user)
