@@ -32,6 +32,30 @@ export function requireAuth(request: Request, response: Response, next: NextFunc
 }
 
 /**
+ * Middleware que verifica que la empresa del usuario esté activa.
+ * Se aplica después de requireAuth. Root está exento.
+ */
+export async function requireActiveCompany(request: Request, response: Response, next: NextFunction) {
+  if (!request.authUser || request.authUser.role === 'root') {
+    next()
+    return
+  }
+
+  try {
+    const db = await readDatabase()
+    const company = db.companies.find((c) => c.id === request.authUser!.companyId)
+    if (company && company.activa === false) {
+      response.status(403).json({ message: 'Tu empresa está inactiva. Contacta al administrador del sistema.' })
+      return
+    }
+  } catch {
+    // Si falla la lectura, dejar pasar (no bloquear por error de DB)
+  }
+
+  next()
+}
+
+/**
  * Middleware que verifica que el usuario autenticado sea root.
  */
 export function requireRoot(request: Request, response: Response, next: NextFunction) {

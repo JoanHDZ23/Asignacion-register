@@ -136,6 +136,13 @@ authRouter.post('/login', async (request, response) => {
       return
     }
 
+    // Verifica que la empresa esté activa
+    const company = db.companies.find((c) => c.id === user.companyId)
+    if (company && company.activa === false) {
+      response.status(403).json({ message: 'La empresa asociada a tu cuenta está inactiva. Contacta al administrador del sistema.' })
+      return
+    }
+
     const token = signToken({
       userId: user.id,
       companyId: user.companyId,
