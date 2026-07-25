@@ -1158,42 +1158,39 @@ export default function AttendanceAdminPage() {
                                       <td>{row.horas > 0 ? <span className="hours-badge">{fmtH(row.horas)}</span> : '—'}</td>
                                       <td><span className={`status-badge status-badge--${row.estado}`}>{statusLabel[row.estado]}</span></td>
                                       <td>
-                                        {currentUser?.role === 'admin' && (
-                                          <div className="table-actions">
-                                            {(row.estado === 'asignado' || row.estado === 'pendiente') && (() => {
-                                              const w = workers.find((wk) => wk.id === row.workerId)
-                                              if (!w?.telefono) return null
-                                              const phone = w.telefono.replace(/\D/g, '').replace(/^0/, '57')
-                                              const phoneFormatted = phone.startsWith('57') ? phone : '57' + phone
-                                              const loc = locations.find((l) => l.id === row.locationId)
-                                              const appUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard/asignacion-turnos` : ''
-                                              const msg = `🔔 *Recordatorio de turno*\n\n` +
-                                                `Hola ${row.nombre.split(' ')[0]}, tienes un turno asignado:\n\n` +
-                                                `📍 ${loc?.nombre ?? row.ubicacion}\n` +
-                                                `📅 ${row.fecha}\n` +
-                                                `🕐 ${row.horarioTurno}\n\n` +
-                                                `Confirma tu asistencia antes de la hora de inicio.\n${appUrl}`
-                                              const waUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(msg)}`
-                                              return (
-                                                <a href={waUrl} target="_blank" rel="noopener noreferrer" className="table-action-btn table-action-btn--wa" title="Enviar por WhatsApp">
-                                                  <Icon name="icon-link" size={14} />
-                                                </a>
-                                              )
-                                            })()}
-                                            <button className="table-action-btn table-action-btn--delete" type="button" title="Quitar del turno"
-                                              onClick={() => { setDeletingTurn(row.turnObj); setActiveModal('turn-delete') }}>
-                                              <Icon name="icon-x-circle" size={14} />
-                                            </button>
-                                          </div>
-                                        )}
+                                        <div className="table-actions">
+                                          {(row.estado === 'asignado' || row.estado === 'pendiente') && (() => {
+                                            const w = workers.find((wk) => wk.id === row.workerId)
+                                            if (!w?.telefono) return null
+                                            const phone = w.telefono.replace(/\D/g, '').replace(/^0/, '57')
+                                            const phoneFormatted = phone.startsWith('57') ? phone : '57' + phone
+                                            const loc = locations.find((l) => l.id === row.locationId)
+                                            const appUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard/asignacion-turnos` : ''
+                                            const msg = `🔔 *Recordatorio de turno*\n\n` +
+                                              `Hola ${row.nombre.split(' ')[0]}, tienes un turno asignado:\n\n` +
+                                              `📍 ${loc?.nombre ?? row.ubicacion}\n` +
+                                              `📅 ${row.fecha}\n` +
+                                              `🕐 ${row.horarioTurno}\n\n` +
+                                              `Confirma tu asistencia antes de la hora de inicio.\n${appUrl}`
+                                            const waUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(msg)}`
+                                            return (
+                                              <a href={waUrl} target="_blank" rel="noopener noreferrer" className="table-action-btn table-action-btn--wa" title="Enviar por WhatsApp">
+                                                <Icon name="icon-link" size={14} />
+                                              </a>
+                                            )
+                                          })()}
+                                          <button className="table-action-btn table-action-btn--delete" type="button" title="Quitar del turno"
+                                            onClick={() => { setDeletingTurn(row.turnObj); setActiveModal('turn-delete') }}>
+                                            <Icon name="icon-x-circle" size={14} />
+                                          </button>
+                                        </div>
                                       </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
-                              {/* Acciones del turno (solo admin) */}
-                              {currentUser?.role === 'admin' && (
-                                <div className="grouped-turn-card__add">
+                              {/* Acciones del turno */}
+                              <div className="grouped-turn-card__add">
                                   <Button type="button" size="sm" variant="ghost"
                                     onClick={() => openEditTurn(turno.empleados[0]?.turnObj as TurnResponse)}>
                                     <Icon name="icon-clipboard" size={13} /> Editar turno
@@ -1223,7 +1220,6 @@ export default function AttendanceAdminPage() {
                                     </div>
                                   )}
                                 </div>
-                              )}
                             </div>
                           )}
                         </article>
