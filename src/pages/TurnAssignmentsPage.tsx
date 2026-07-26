@@ -1082,8 +1082,9 @@ export default function TurnAssignmentsPage() {
                           }
 
                           // SALIDA: botón visible pero deshabilitado hasta que supervisor apruebe
+                          // Supervisores: no necesitan aprobación (su ingreso se auto-confirma)
                           if (pendingAction === 'salida') {
-                            const approved = Boolean(turn.confirmedAt)
+                            const approved = Boolean(turn.confirmedAt) || turn.estado === 'confirmado' || isSupervisor
                             return (
                               <div style={{ display: 'grid', gap: '.3rem', justifyItems: 'end' }}>
                                 <Button type="button" size="sm"
