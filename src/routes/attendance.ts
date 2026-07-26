@@ -656,16 +656,8 @@ attendanceRouter.post('/mark', async (request, response) => {
     }
   }
 
-  // ── SALIDA: solo permite si el supervisor ya aprobó el ingreso ──
-  if (parsedAction === 'salida') {
-    if (!turn.confirmedAt) {
-      response.status(403).json({
-        message: 'El supervisor debe aprobar tu ingreso antes de que puedas marcar salida.',
-        code: 'AWAITING_APPROVAL',
-      })
-      return
-    }
-  }
+  // ── SALIDA: se permite marcar aunque no haya aprobación
+  // Las horas se registran pero solo son VÁLIDAS si confirmedAt existe
 
   // Para salida: construye un locationCheck pasivo (sin validar radio)
   let locationCheck: ReturnType<typeof buildLocationCheck> = null
