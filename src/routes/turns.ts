@@ -293,13 +293,21 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
 
   turn.estado = estado
 
-  // Confirmación del supervisor o admin: solo es una firma/registro, NO cambia el estado
+  // Confirmación del supervisor o admin: registra la firma de aprobación
+  // El estado se mantiene en 'en_proceso' — el empleado marca salida para finalizar
   if (estado === 'confirmado') {
-    turn.confirmedByUserId = request.authUser!.userId
-    turn.confirmedByUserName = currentUser?.nombreCompleto
-    turn.confirmedAt = new Date().toISOString()
-    // El estado SIEMPRE se mantiene en 'en_proceso' — el empleado marca salida para finalizar
-    turn.estado = 'en_proceso'
+    // Si el turno YA tiene checkIn (el empleado ya marcó entrada),
+    // esto es una APROBACIÓN del supervisor → registrar firma, mantener en_proceso
+    if (turn.attendance?.checkIn) {
+      turn.confirmedByUserId = request.authUser!.userId
+      turn.confirmedByUserName = currentUser?.nombreCompleto
+      turn.confirmedAt = new Date().toISOString()
+      turn.estado = 'en_proceso'
+    } else {
+      // Si NO tiene checkIn, es el EMPLEADO confirmando que asistirá
+      // El estado pasa a 'confirmado' (confirmó asistencia, esperando hora de entrada)
+      turn.estado = 'confirmado'
+    }
   }
 
   // Rechazo: registra motivo y agrega como novedad
