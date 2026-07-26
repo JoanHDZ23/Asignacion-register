@@ -149,7 +149,8 @@ function needsSupervisorConfirm(turn: TurnAssignment): boolean {
   return Boolean(
     turn.attendance?.checkIn?.markedAt &&
     !turn.attendance?.checkOut?.markedAt &&
-    turn.estado === 'en_proceso'
+    turn.estado === 'en_proceso' &&
+    !turn.confirmedAt  // Ya fue aprobado → no necesita confirmación
   )
 }
 
@@ -1333,7 +1334,7 @@ export default function TurnAssignmentsPage() {
                         <div className="colleague-card__actions">
                           <span className={`turn-status turn-status--${t.estado}`}>{displayEstado(t)}</span>
                           {/* Supervisor aprueba a los compañeros que ya marcaron entrada */}
-                          {!isSelf && hasCheckedIn && t.estado !== 'confirmado' && t.estado !== 'finalizado' ? (
+                          {!isSelf && hasCheckedIn && t.estado !== 'confirmado' && t.estado !== 'finalizado' && !t.confirmedAt ? (
                             <Button
                               type="button" size="sm" variant="primary"
                               disabled={statusLoadingId === t.id}
@@ -1341,7 +1342,7 @@ export default function TurnAssignmentsPage() {
                             >
                               <Icon name="icon-check-circle" size={13} /> Aprobar ingreso
                             </Button>
-                          ) : t.estado === 'confirmado' || (isSelf && hasCheckedIn) ? (
+                          ) : (t.estado === 'confirmado' || t.confirmedAt) || (isSelf && hasCheckedIn) ? (
                             <span className="colleague-card__done">✓ {isSelf ? 'Tu ingreso' : 'Aprobado'}</span>
                           ) : !hasCheckedIn ? (
                             <span className="colleague-card__pending">Esperando ingreso</span>
