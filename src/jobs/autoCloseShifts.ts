@@ -69,7 +69,7 @@ export async function runAutoCloseShifts() {
           const autoCheckOut = buildAutoCheckOut(turn)
           if (autoCheckOut) {
             turn.attendance = { ...turn.attendance, checkOut: autoCheckOut }
-            turn.estado = 'finalizado'
+            turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
             turn.updatedAt = new Date().toISOString()
             await updateTurn(turn)
             // Registra las horas trabajadas

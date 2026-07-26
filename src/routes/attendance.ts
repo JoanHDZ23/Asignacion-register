@@ -552,7 +552,8 @@ attendanceRouter.post('/verify-authentication', async (request, response) => {
   if (action === 'entrada') {
     turn.estado = isSupervisorUser(user) ? 'confirmado' : 'en_proceso'
   } else {
-    turn.estado = 'finalizado'
+    // Salida: si fue aprobado → finalizado, si no → no_aprobado
+    turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
   }
   turn.updatedAt = new Date().toISOString()
 
@@ -752,7 +753,8 @@ attendanceRouter.post('/mark', async (request, response) => {
   if (parsedAction === 'entrada') {
     turn.estado = isSupervisorUser(user) ? 'confirmado' : 'en_proceso'
   } else {
-    turn.estado = 'finalizado'
+    // Salida: si fue aprobado → finalizado, si no → no_aprobado
+    turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
   }
   turn.updatedAt = new Date().toISOString()
 

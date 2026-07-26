@@ -244,6 +244,7 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
     'finalizado',
     'confirmado',
     'rechazado',
+    'no_aprobado',
   ]
 
   if (!allowedStatus.includes(estado)) {

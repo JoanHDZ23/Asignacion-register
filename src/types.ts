@@ -37,7 +37,7 @@ export const defaultPermissionsByRole: Record<UserRole, { empresa: AccessModule[
     academia: ['dashboard', 'codigo-qr', 'porcentaje-asistencia', 'justificaciones'],
   },
 }
-export type TurnStatus = 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado'
+export type TurnStatus = 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado' | 'no_aprobado'
 export type InvitationStatus = 'pendiente' | 'completada' | 'cancelada'
 export type AttendanceAction = 'entrada' | 'salida'
 export type CompanyType = 'empresa' | 'academia'
