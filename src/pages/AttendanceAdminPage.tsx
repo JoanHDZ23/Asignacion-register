@@ -28,6 +28,13 @@ const accessModuleLabels: Record<AccessModule, string> = {
   facturacion: 'Facturación',
   informes: 'Informes',
   configuracion: 'Configuración',
+  'crear-cargos': 'Crear cargos',
+  'crear-ubicaciones': 'Crear ubicaciones',
+  'invitar-empleados': 'Invitar empleados',
+  'editar-empleados': 'Editar empleados',
+  'eliminar-empleados': 'Eliminar empleados',
+  'editar-turnos': 'Editar turnos',
+  'eliminar-turnos': 'Eliminar turnos',
   'asistencia-clase': 'Asistencia por clase',
   'codigo-qr': 'Código QR',
   'asistencia-docente': 'Asistencia docente',
@@ -48,7 +55,14 @@ const accessModuleDescriptions: Record<AccessModule, string> = {
   teletrabajo: 'Fichar desde cualquier ubicación.',
   facturacion: 'Generar cuentas de cobro por horas trabajadas.',
   informes: 'Consultar reportes, historial de horas y exportar CSV.',
-  configuracion: 'Crear cargos, ubicaciones, invitar empleados, editar y eliminar.',
+  configuracion: 'Acceso general a configuración del sistema.',
+  'crear-cargos': 'Registrar y configurar cargos con permisos.',
+  'crear-ubicaciones': 'Registrar puntos operativos con geolocalización.',
+  'invitar-empleados': 'Generar links de invitación para nuevos empleados.',
+  'editar-empleados': 'Modificar datos personales y cargo de empleados.',
+  'eliminar-empleados': 'Eliminar empleados del sistema.',
+  'editar-turnos': 'Modificar fecha, hora y ubicación de turnos.',
+  'eliminar-turnos': 'Eliminar turnos del sistema.',
   'asistencia-clase': 'Tomar pase de lista por asignatura.',
   'codigo-qr': 'Escanear QR para confirmar presencia.',
   'asistencia-docente': 'Verificar horas cátedra cumplidas.',
@@ -101,7 +115,7 @@ const empresaPermissionGroups: PermissionGroup[] = [
     title: 'Administración',
     description: 'Gestión completa del sistema.',
     tag: 'Admin',
-    modules: ['configuracion', 'informes'],
+    modules: ['crear-cargos', 'crear-ubicaciones', 'invitar-empleados', 'editar-empleados', 'eliminar-empleados', 'editar-turnos', 'eliminar-turnos', 'informes'],
   },
 ]
 
@@ -959,13 +973,14 @@ export default function AttendanceAdminPage() {
       {(() => {
         const isAdminRole = currentUser?.role === 'admin'
         const levels = currentUser?.permissionLevels ?? {}
+        const mods = currentUser?.allowedModules ?? []
         const hasLevel = (mod: string, ...lvl: string[]) => lvl.includes(levels[mod] ?? '')
+        const hasMod = (mod: string) => mods.includes(mod as any)
 
-        // Admin always sees everything. Others check permissionLevels OR fallback to module access
-        const canInvite = isAdminRole || isSupervisor || hasLevel('configuracion', 'edit', 'full')
-        const canCreatePosition = isAdminRole || hasLevel('configuracion', 'full')
-        const canCreateLocation = isAdminRole || hasLevel('configuracion', 'edit', 'full') || hasLevel('geolocalizacion', 'edit', 'full')
-        const canCreateTurn = isAdminRole || hasLevel('turnos-fijos', 'edit', 'full')
+        const canInvite = isAdminRole || hasMod('invitar-empleados') || hasMod('configuracion') || isSupervisor
+        const canCreatePosition = isAdminRole || hasMod('crear-cargos')
+        const canCreateLocation = isAdminRole || hasMod('crear-ubicaciones')
+        const canCreateTurn = isAdminRole || hasMod('turnos-fijos') && (hasLevel('turnos-fijos', 'edit', 'full') || isAdminRole)
         const showActions = canInvite || canCreatePosition || canCreateLocation || canCreateTurn
 
         return showActions ? (
