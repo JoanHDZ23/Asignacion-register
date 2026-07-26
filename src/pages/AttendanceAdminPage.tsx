@@ -47,8 +47,8 @@ const accessModuleDescriptions: Record<AccessModule, string> = {
   'biometria-facial': 'Marcar asistencia con verificación facial.',
   teletrabajo: 'Fichar desde cualquier ubicación.',
   facturacion: 'Generar cuentas de cobro por horas trabajadas.',
-  informes: 'Consultar reportes y exportar datos.',
-  configuracion: 'Crear cargos, ubicaciones, invitar y editar empleados.',
+  informes: 'Consultar reportes, historial de horas y exportar CSV.',
+  configuracion: 'Crear cargos, ubicaciones, invitar empleados, editar y eliminar.',
   'asistencia-clase': 'Tomar pase de lista por asignatura.',
   'codigo-qr': 'Escanear QR para confirmar presencia.',
   'asistencia-docente': 'Verificar horas cátedra cumplidas.',
@@ -87,9 +87,9 @@ const empresaPermissionGroups: PermissionGroup[] = [
   },
   {
     title: 'Gestión de asistencia',
-    description: 'Ver historial de horas, generar cuentas de cobro, exportar reportes.',
+    description: 'Ver historial de horas, generar cuentas de cobro.',
     tag: 'Analista',
-    modules: ['horas-extras-recargos', 'facturacion', 'informes'],
+    modules: ['horas-extras-recargos', 'facturacion'],
   },
   {
     title: 'Trabajo remoto',
@@ -99,9 +99,9 @@ const empresaPermissionGroups: PermissionGroup[] = [
   },
   {
     title: 'Administración',
-    description: 'Crear cargos, ubicaciones, invitar empleados, editar configuración.',
+    description: 'Gestión completa del sistema.',
     tag: 'Admin',
-    modules: ['configuracion'],
+    modules: ['configuracion', 'informes'],
   },
 ]
 
