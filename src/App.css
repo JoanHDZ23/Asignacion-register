@@ -788,6 +788,7 @@ button, input, textarea, select { font: inherit; }
 .turn-status--finalizado { background: var(--clr-green-light);  color: var(--clr-green); }
 .turn-status--confirmado { background: #d1fae5; color: #065f46; }
 .turn-status--rechazado  { background: var(--clr-red-light);    color: var(--clr-red); }
+.turn-status--no_aprobado { background: var(--clr-amber-light); color: #92400e; }
 
 /* Table action buttons inline */
 .table-actions { display: flex; gap: .375rem; align-items: center; }

@@ -27,8 +27,15 @@ type TurnAssignment = {
   locationUrl?: string
   confirmedDeadline?: string
   confirmedAt?: string           // ISO — cuando el supervisor aprobó
-  estado: 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado'
+  estado: 'pendiente' | 'asignado' | 'en_proceso' | 'finalizado' | 'confirmado' | 'rechazado' | 'no_aprobado'
   attendance?: TurnResponse['attendance']
+}
+
+/** Texto a mostrar para el estado del turno */
+function displayEstado(turn: TurnAssignment): string {
+  if (turn.estado === 'en_proceso' && turn.confirmedAt) return 'en proceso - aprobado'
+  if (turn.estado === 'no_aprobado') return 'no aprobado'
+  return turn.estado.replace('_', ' ')
 }
 
 function mapTurns(response: TurnResponse[], locationMap: Map<string, LocationResponse> = new Map()): TurnAssignment[] {
@@ -1026,7 +1033,7 @@ export default function TurnAssignmentsPage() {
                       )}
                     </div>
                     <div className="biometric-turn-item__actions">
-                      <span className={`turn-status turn-status--${turn.estado}`}>{turn.estado.replace('_', ' ')}</span>
+                      <span className={`turn-status turn-status--${turn.estado}`}>${displayEstado(turn)}</span>
 
                       {/* Estado del turno y acciones para el empleado */}
                       {(turn.estado === 'pendiente' || turn.estado === 'asignado') ? (
@@ -1176,7 +1183,7 @@ export default function TurnAssignmentsPage() {
                               </span>
                             </div>
                             <div className="grouped-turn-card__stats">
-                              <span className={`turn-status turn-status--${turn.estado}`}>{turn.estado.replace('_', ' ')}</span>
+                              <span className={`turn-status turn-status--${turn.estado}`}>${displayEstado(turn)}</span>
                             </div>
                             <div className="grouped-turn-card__actions-header">
                               {needsSupervisorConfirm(turn) ? (
@@ -1324,7 +1331,7 @@ export default function TurnAssignmentsPage() {
                           )}
                         </div>
                         <div className="colleague-card__actions">
-                          <span className={`turn-status turn-status--${t.estado}`}>{t.estado.replace('_', ' ')}</span>
+                          <span className={`turn-status turn-status--${t.estado}`}>{displayEstado(t)}</span>
                           {/* Supervisor aprueba a los compañeros que ya marcaron entrada */}
                           {!isSelf && hasCheckedIn && t.estado !== 'confirmado' && t.estado !== 'finalizado' ? (
                             <Button
@@ -1668,7 +1675,7 @@ export default function TurnAssignmentsPage() {
                   </td>
                   <td>
                     <span className={`turn-status turn-status--${row.estado}`}>
-                      {row.estado.replace('_', ' ')}
+                      {row.estado === 'no_aprobado' ? 'no aprobado' : row.estado.replace('_', ' ')}
                     </span>
                   </td>
                   {canManageTurns ? (
