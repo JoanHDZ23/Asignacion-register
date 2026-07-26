@@ -96,7 +96,17 @@ export function resolveAllowedModules(db: DatabaseSchema, user: User): AccessMod
 
   if (position?.permissions?.length) {
     // Intersección: solo permisos del cargo que la empresa tiene habilitados
-    return position.permissions.filter((m) => companyModules.includes(m))
+    const posResolved = position.permissions.filter((m) => companyModules.includes(m))
+
+    // Módulos globales: siempre incluidos si la empresa los tiene
+    const globalModules: AccessModule[] = ['trazabilidad']
+    for (const gm of globalModules) {
+      if (companyModules.includes(gm) && !posResolved.includes(gm)) {
+        posResolved.push(gm)
+      }
+    }
+
+    return posResolved
   }
 
   // Permisos por defecto del rol según tipo de empresa
@@ -104,7 +114,17 @@ export function resolveAllowedModules(db: DatabaseSchema, user: User): AccessMod
   const defaults = companyType === 'academia' ? roleDefaults.academia : roleDefaults.empresa
 
   // Intersección con módulos habilitados de la empresa
-  return defaults.filter((m) => companyModules.includes(m))
+  const resolved = defaults.filter((m) => companyModules.includes(m))
+
+  // Módulos globales: si la empresa los tiene habilitados, todos los usuarios los ven
+  const globalModules: AccessModule[] = ['trazabilidad']
+  for (const gm of globalModules) {
+    if (companyModules.includes(gm) && !resolved.includes(gm)) {
+      resolved.push(gm)
+    }
+  }
+
+  return resolved
 }
 
 /**
