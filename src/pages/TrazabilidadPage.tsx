@@ -6,11 +6,14 @@ const TRACER_URL = import.meta.env.VITE_TRACER_URL || 'https://ommex-tracer.verc
 /**
  * Página que embedea el microfrontend de Ommex Tracer (trazabilidad fotográfica).
  * Solo accesible si la empresa tiene el módulo 'trazabilidad' habilitado.
+ * Pasa companyId como query param para aislamiento multi-empresa.
  */
 export default function TrazabilidadPage() {
   const currentUser = getCurrentUser()
   const hasModule = currentUser?.allowedModules?.includes('trazabilidad')
   const [iframeLoaded, setIframeLoaded] = useState(false)
+
+  const iframeUrl = `${TRACER_URL}?companyId=${encodeURIComponent(currentUser?.companyId ?? '')}&user=${encodeURIComponent(currentUser?.nombreCompleto ?? '')}`
 
   if (!hasModule) {
     return (
@@ -36,7 +39,7 @@ export default function TrazabilidadPage() {
         </div>
       )}
       <iframe
-        src={TRACER_URL}
+        src={iframeUrl}
         title="Ommex Tracer"
         onLoad={() => setIframeLoaded(true)}
         style={{
