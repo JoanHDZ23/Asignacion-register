@@ -159,6 +159,8 @@ export type TurnResponse = {
   locationNombre?: string
   confirmedDeadline?: string
   confirmHoursLimit?: number
+  confirmedAt?: string
+  confirmedByUserName?: string
   rejectionReason?: string
   attendance?: {
     checkIn?: {

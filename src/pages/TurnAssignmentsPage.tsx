@@ -51,7 +51,7 @@ function mapTurns(response: TurnResponse[], locationMap: Map<string, LocationRes
       locationId: turn.locationId,
       locationUrl,
       confirmedDeadline: turn.confirmedDeadline,
-      confirmedAt: (turn as any).confirmedAt,
+      confirmedAt: turn.confirmedAt,
       estado: turn.estado,
       attendance: turn.attendance,
     }
@@ -1073,22 +1073,22 @@ export default function TurnAssignmentsPage() {
                             )
                           }
 
-                          // SALIDA: solo si supervisor aprobó
+                          // SALIDA: botón visible pero deshabilitado hasta que supervisor apruebe
                           if (pendingAction === 'salida') {
-                            if (!turn.confirmedAt) {
-                              return (
-                                <div className="confirm-required-msg">
-                                  <Icon name="icon-shield" size={13} />
-                                  <span>Esperando aprobación del supervisor</span>
-                                </div>
-                              )
-                            }
+                            const approved = Boolean(turn.confirmedAt)
                             return (
-                              <Button type="button" size="sm"
-                                onClick={() => void handleAttendanceVerification(turn, 'salida', null)}
-                                disabled={attendanceLoadingId === turn.id}>
-                                {attendanceLoadingId === turn.id ? 'Registrando...' : 'Marcar salida'}
-                              </Button>
+                              <div style={{ display: 'grid', gap: '.3rem', justifyItems: 'end' }}>
+                                <Button type="button" size="sm"
+                                  onClick={() => void handleAttendanceVerification(turn, 'salida', null)}
+                                  disabled={!approved || attendanceLoadingId === turn.id}>
+                                  {attendanceLoadingId === turn.id ? 'Registrando...' : 'Marcar salida'}
+                                </Button>
+                                {!approved && (
+                                  <span style={{ fontSize: 11, color: '#d97706', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                                    <Icon name="icon-shield" size={11} /> Pendiente aprobación · horas no válidas sin aprobación
+                                  </span>
+                                )}
+                              </div>
                             )
                           }
 
