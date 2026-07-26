@@ -273,15 +273,25 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
   const isSupervisorByRole = role === 'supervisor'
     || (role !== 'admin' && currentUser?.cargo?.toLowerCase().includes('supervisor'))
 
-  // Operativo puro: solo puede actualizar sus propios turnos
-  if (!isSupervisorByRole && role === 'operativo' && turn.assignedToUserId !== request.authUser!.userId) {
+  // Check if user has approval permissions (geolocalizacion module or admin-level)
+  const db2 = await readDatabase()
+  const position = currentUser?.positionId
+    ? db2.positions.find((p) => p.id === currentUser.positionId)
+    : undefined
+  const userModules = position?.permissions ?? []
+  const canApprove = isSupervisorByRole || role === 'admin'
+    || userModules.includes('geolocalizacion')
+    || userModules.includes('configuracion')
+
+  // Operativo sin permisos de aprobación: solo puede actualizar sus propios turnos
+  if (!canApprove && role === 'operativo' && turn.assignedToUserId !== request.authUser!.userId) {
     response.status(403).json({ message: 'Solo puedes actualizar turnos asignados a tu usuario.' })
     return
   }
 
-  // Supervisor (por rol o por cargo): solo puede confirmar o rechazar
-  if (isSupervisorByRole && !['confirmado', 'rechazado'].includes(estado)) {
-    response.status(403).json({ message: 'El supervisor solo puede confirmar o rechazar turnos.' })
+  // Restrict: users without approval permissions can only confirm/reject their own turns
+  if (!canApprove && !['confirmado', 'rechazado'].includes(estado) && turn.assignedToUserId !== request.authUser!.userId) {
+    response.status(403).json({ message: 'No tienes permisos para esta accion.' })
     return
   }
 
