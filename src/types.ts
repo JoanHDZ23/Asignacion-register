@@ -56,7 +56,14 @@ export type EmpresaModule =
   | 'teletrabajo'              // Fichaje remoto
   | 'facturacion'              // Cuenta de cobro y liquidación
   | 'informes'                 // Reportes y exportación
-  | 'configuracion'            // Gestión de cargos, ubicaciones
+  | 'configuracion'            // Gestión general (legacy)
+  | 'crear-cargos'             // Crear y editar cargos
+  | 'crear-ubicaciones'        // Crear y editar ubicaciones
+  | 'invitar-empleados'        // Generar links de invitación
+  | 'editar-empleados'         // Editar datos de empleados
+  | 'eliminar-empleados'       // Eliminar empleados
+  | 'editar-turnos'            // Editar turnos creados
+  | 'eliminar-turnos'          // Eliminar turnos
 
 // Módulos disponibles para tipo ACADEMIA
 export type AcademiaModule =
