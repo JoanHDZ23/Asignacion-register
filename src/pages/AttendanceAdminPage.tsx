@@ -508,10 +508,10 @@ export default function AttendanceAdminPage() {
     if (!token || !addEmployeeId) return
     setAddingEmployee(true)
     try {
-      await apiRequest<unknown>('/operations/turns/add-employee', {
+      await apiRequest<unknown>('/turns', {
         method: 'POST', token,
         body: {
-          userId: addEmployeeId,
+          assignedToUserId: addEmployeeId,
           fecha: group.fecha,
           hora: group.hora,
           horaFin: group.horaFin || undefined,
