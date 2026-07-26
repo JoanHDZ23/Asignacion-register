@@ -282,15 +282,12 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
     || userModules.includes('geolocalizacion' as any)
     || userModules.includes('configuracion' as any)
 
-  // Operativo sin permisos de aprobación: solo puede actualizar sus propios turnos
-  if (!canApprove && role === 'operativo' && turn.assignedToUserId !== request.authUser!.userId) {
+  // Cualquier usuario de la empresa puede confirmar/rechazar (el frontend controla quién ve el botón)
+  // Solo se bloquea si un operativo intenta cambiar un turno que NO es suyo a un estado distinto de confirmado/rechazado
+  if (role === 'operativo' && !isSupervisorByRole && !canApprove
+    && turn.assignedToUserId !== request.authUser!.userId
+    && !['confirmado', 'rechazado'].includes(estado)) {
     response.status(403).json({ message: 'Solo puedes actualizar turnos asignados a tu usuario.' })
-    return
-  }
-
-  // Restrict: users without approval permissions can only confirm/reject their own turns
-  if (!canApprove && !['confirmado', 'rechazado'].includes(estado) && turn.assignedToUserId !== request.authUser!.userId) {
-    response.status(403).json({ message: 'No tienes permisos para esta accion.' })
     return
   }
 
