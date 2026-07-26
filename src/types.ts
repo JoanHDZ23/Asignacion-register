@@ -57,6 +57,7 @@ export type EmpresaModule =
   | 'facturacion'              // Cuenta de cobro y liquidación
   | 'informes'                 // Reportes y exportación
   | 'configuracion'            // Gestión general (legacy)
+  | 'trazabilidad'             // Ommex Tracer — registro fotográfico de operaciones
   | 'crear-cargos'             // Crear y editar cargos
   | 'crear-ubicaciones'        // Crear y editar ubicaciones
   | 'invitar-empleados'        // Generar links de invitación

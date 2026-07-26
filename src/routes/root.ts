@@ -186,3 +186,29 @@ rootRouter.post('/companies', async (request, response) => {
 
   response.status(201).json(newCompany)
 })
+
+// ── PATCH /api/root/companies/:companyId/modules ────────────────────────────
+// Habilita o deshabilita módulos específicos para una empresa.
+// Body: { enabledModules: AccessModule[] }
+rootRouter.patch('/companies/:companyId/modules', async (request, response) => {
+  const { companyId } = request.params
+  const { enabledModules } = request.body as { enabledModules?: AccessModule[] }
+
+  if (!Array.isArray(enabledModules)) {
+    response.status(400).json({ message: 'enabledModules (array) es requerido.' })
+    return
+  }
+
+  const companiesCol = await getCompaniesCollection()
+  const result = await companiesCol.updateOne(
+    { id: companyId },
+    { $set: { enabledModules } },
+  )
+
+  if (result.matchedCount === 0) {
+    response.status(404).json({ message: 'Empresa no encontrada.' })
+    return
+  }
+
+  response.json({ message: 'Módulos actualizados correctamente.', enabledModules })
+})
