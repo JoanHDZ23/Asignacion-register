@@ -42,6 +42,7 @@ const accessModuleLabels: Record<AccessModule, string> = {
   justificaciones: 'Justificaciones',
   'alertas-inasistencia': 'Alertas inasistencia',
   'eventos-talleres': 'Eventos y talleres',
+  trazabilidad: 'Trazabilidad fotográfica',
 }
 
 const accessModuleDescriptions: Record<AccessModule, string> = {
@@ -70,6 +71,7 @@ const accessModuleDescriptions: Record<AccessModule, string> = {
   justificaciones: 'Gestionar excusas médicas o institucionales.',
   'alertas-inasistencia': 'Enviar alertas por faltas consecutivas.',
   'eventos-talleres': 'Gestionar actividades extracurriculares.',
+  trazabilidad: 'Registro fotográfico de operaciones logísticas (Ommex Tracer).',
 }
 
 // ── Permisos clasificados por funcionalidad ──────────────────────────────────
