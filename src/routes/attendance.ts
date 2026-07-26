@@ -643,7 +643,7 @@ attendanceRouter.post('/mark', async (request, response) => {
 
   // ── ENTRADA: solo permite 30 min antes de la hora de inicio ──
   if (parsedAction === 'entrada') {
-    const turnStartMs = new Date(`${turn.fecha}T${turn.hora}:00`).getTime()
+    const turnStartMs = new Date(`${turn.fecha}T${turn.hora}:00-05:00`).getTime()
     const windowOpenMs = turnStartMs - 30 * 60 * 1000 // 30 min antes
     const now = Date.now()
     if (now < windowOpenMs) {
@@ -728,10 +728,10 @@ attendanceRouter.post('/mark', async (request, response) => {
       })
     : null
 
-  // ENTRADA: se registra con la hora de inicio del turno (no la hora real)
+  // ENTRADA: se registra con la hora de inicio del turno (en zona horaria Colombia UTC-5)
   // SALIDA: se registra con la hora real del momento
   const markedAt = parsedAction === 'entrada'
-    ? new Date(`${turn.fecha}T${turn.hora}:00`).toISOString()
+    ? new Date(`${turn.fecha}T${turn.hora}:00-05:00`).toISOString()
     : new Date().toISOString()
 
   const attendanceRecord: AttendanceRecord = {

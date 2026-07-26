@@ -18,8 +18,8 @@ function buildAutoCheckOut(turn: Turn): AttendanceRecord | null {
   const [eh, em] = turn.horaFin.split(':').map(Number)
   if (Number.isNaN(eh) || Number.isNaN(em)) return null
 
-  let endMs = new Date(`${turn.fecha}T${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00`).getTime()
-  const startMs = new Date(`${turn.fecha}T${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}:00`).getTime()
+  let endMs = new Date(`${turn.fecha}T${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00-05:00`).getTime()
+  const startMs = new Date(`${turn.fecha}T${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}:00-05:00`).getTime()
   if (endMs <= startMs) endMs += 24 * 3_600_000 // nocturno
 
   return {
@@ -59,8 +59,8 @@ export async function runAutoCloseShifts() {
       const [eh, em] = turn.horaFin.split(':').map(Number)
       const [sh, sm] = turn.hora.split(':').map(Number)
       if (!Number.isNaN(eh) && !Number.isNaN(em)) {
-        let endMs = new Date(`${turn.fecha}T${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00`).getTime()
-        const startMs = new Date(`${turn.fecha}T${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}:00`).getTime()
+        let endMs = new Date(`${turn.fecha}T${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00-05:00`).getTime()
+        const startMs = new Date(`${turn.fecha}T${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}:00-05:00`).getTime()
         if (endMs <= startMs) endMs += 24 * 3_600_000
 
         const graceEnd = endMs + AUTO_CLOSE_GRACE_MINUTES * 60_000
