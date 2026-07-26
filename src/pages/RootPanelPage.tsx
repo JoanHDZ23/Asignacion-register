@@ -13,6 +13,7 @@ type RootCompany = {
   ciudad?: string
   tipo: 'empresa' | 'academia'
   activa: boolean
+  enabledModules?: string[]
   adminCount: number
   employeeCount: number
   createdAt: string
@@ -135,6 +136,29 @@ export default function RootPanelPage() {
         prev.map((c) => (c.id === companyId ? { ...c, activa: !currentActiva } : c)),
       )
       setFeedback({ kind: 'success', message: `Empresa ${!currentActiva ? 'activada' : 'desactivada'}.` })
+    } catch (err) {
+      setFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error' })
+    }
+  }
+
+  const handleToggleTrazabilidad = async (company: RootCompany) => {
+    if (!token) return
+    const modules = company.enabledModules ?? []
+    const hasTraz = modules.includes('trazabilidad')
+    const newModules = hasTraz
+      ? modules.filter((m) => m !== 'trazabilidad')
+      : [...modules, 'trazabilidad']
+
+    try {
+      await apiRequest(`/root/companies/${company.id}/modules`, {
+        method: 'PATCH',
+        token,
+        body: { enabledModules: newModules },
+      })
+      setCompanies((prev) =>
+        prev.map((c) => (c.id === company.id ? { ...c, enabledModules: newModules } : c)),
+      )
+      setFeedback({ kind: 'success', message: `Trazabilidad ${hasTraz ? 'deshabilitada' : 'habilitada'} para ${company.nombre}.` })
     } catch (err) {
       setFeedback({ kind: 'error', message: err instanceof Error ? err.message : 'Error' })
     }
@@ -303,6 +327,13 @@ export default function RootPanelPage() {
                   onClick={() => handleToggleCompany(company.id, company.activa)}
                 >
                   {company.activa ? 'Desactivar' : 'Activar'}
+                </Button>
+                <Button
+                  variant={(company.enabledModules ?? []).includes('trazabilidad') ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleToggleTrazabilidad(company)}
+                >
+                  {(company.enabledModules ?? []).includes('trazabilidad') ? '📷 Trazabilidad ✓' : '📷 Habilitar Trazabilidad'}
                 </Button>
               </div>
             </div>

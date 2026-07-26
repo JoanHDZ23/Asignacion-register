@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage'
 import MemberInvitationPage from './pages/MemberInvitationPage'
 import RegisterPage from './pages/RegisterPage'
 import RootPanelPage from './pages/RootPanelPage'
+import TrazabilidadPage from './pages/TrazabilidadPage'
 import TurnAssignmentsPage from './pages/TurnAssignmentsPage'
 
 export const router = createBrowserRouter([
@@ -55,6 +56,10 @@ export const router = createBrowserRouter([
       {
         path: 'gestion-asistencia',
         element: <AttendanceAdminPage />,
+      },
+      {
+        path: 'trazabilidad',
+        element: <TrazabilidadPage />,
       },
     ],
   },

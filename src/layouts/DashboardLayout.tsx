@@ -42,6 +42,7 @@ export function DashboardLayout() {
         'turnos-rotativos':      { to: '/dashboard/asignacion-turnos', label: 'Turnos', icon: 'icon-calendar' },
         'geolocalizacion':       { to: '/dashboard/gestion-asistencia', label: 'Gestion de asistencia', icon: 'icon-clipboard' },
         'facturacion':           { to: '/dashboard/gestion-asistencia', label: 'Gestion de asistencia', icon: 'icon-clipboard' },
+        'trazabilidad':          { to: '/dashboard/trazabilidad', label: 'Trazabilidad', icon: 'icon-clipboard' },
         // Academia
         'asistencia-clase':      { to: '/dashboard/asignacion-turnos', label: 'Asistencia', icon: 'icon-calendar' },
         'asistencia-docente':    { to: '/dashboard/asignacion-turnos', label: 'Asistencia docente', icon: 'icon-calendar' },

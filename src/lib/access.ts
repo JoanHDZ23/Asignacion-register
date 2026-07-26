@@ -10,6 +10,7 @@ export type AccessModule =
   | 'facturacion'
   | 'informes'
   | 'configuracion'
+  | 'trazabilidad'
   | 'crear-cargos'
   | 'crear-ubicaciones'
   | 'invitar-empleados'
