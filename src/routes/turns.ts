@@ -273,15 +273,14 @@ turnsRouter.patch('/:turnId/status', async (request, response) => {
   const isSupervisorByRole = role === 'supervisor'
     || (role !== 'admin' && currentUser?.cargo?.toLowerCase().includes('supervisor'))
 
-  // Check if user has approval permissions (geolocalizacion module or admin-level)
-  const db2 = await readDatabase()
+  // Check if user has approval permissions
   const position = currentUser?.positionId
-    ? db2.positions.find((p) => p.id === currentUser.positionId)
+    ? db.positions.find((p) => p.id === currentUser.positionId)
     : undefined
   const userModules = position?.permissions ?? []
   const canApprove = isSupervisorByRole || role === 'admin'
-    || userModules.includes('geolocalizacion')
-    || userModules.includes('configuracion')
+    || userModules.includes('geolocalizacion' as any)
+    || userModules.includes('configuracion' as any)
 
   // Operativo sin permisos de aprobación: solo puede actualizar sus propios turnos
   if (!canApprove && role === 'operativo' && turn.assignedToUserId !== request.authUser!.userId) {
