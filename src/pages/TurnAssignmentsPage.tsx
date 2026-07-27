@@ -34,6 +34,7 @@ type TurnAssignment = {
 /** Texto a mostrar para el estado del turno */
 function displayEstado(turn: TurnAssignment): string {
   if (turn.estado === 'en_proceso' && turn.confirmedAt) return 'en proceso - aprobado'
+  if (turn.estado === 'confirmado' && turn.confirmedAt) return 'en proceso - aprobado'
   if (turn.estado === 'no_aprobado') return 'no aprobado'
   return turn.estado.replace('_', ' ')
 }
