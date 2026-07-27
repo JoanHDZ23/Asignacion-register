@@ -69,11 +69,14 @@ export async function runAutoCloseShifts() {
           const autoCheckOut = buildAutoCheckOut(turn)
           if (autoCheckOut) {
             turn.attendance = { ...turn.attendance, checkOut: autoCheckOut }
-            turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
+            // Supervisores no necesitan aprobación
+            const assignedUser = db.users.find((u) => u.id === turn.assignedToUserId)
+            const isAssignedSupervisor = assignedUser?.role === 'supervisor'
+              || (assignedUser?.role !== 'admin' && Boolean(assignedUser?.cargo?.toLowerCase().includes('supervisor')))
+            turn.estado = (turn.confirmedAt || isAssignedSupervisor) ? 'finalizado' : 'no_aprobado'
             turn.updatedAt = new Date().toISOString()
             await updateTurn(turn)
             // Registra las horas trabajadas
-            const assignedUser = db.users.find((u) => u.id === turn.assignedToUserId)
             await registerHorasTurno({
               turn,
               userName: assignedUser?.nombreCompleto ?? turn.assignedToUserName ?? '',

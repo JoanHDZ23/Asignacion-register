@@ -560,7 +560,7 @@ attendanceRouter.post('/verify-authentication', async (request, response) => {
     }
   } else {
     // Salida: si fue aprobado → finalizado, si no → no_aprobado
-    turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
+    turn.estado = (turn.confirmedAt || isSupervisorUser(user)) ? 'finalizado' : 'no_aprobado'
   }
   turn.updatedAt = new Date().toISOString()
 
@@ -768,7 +768,7 @@ attendanceRouter.post('/mark', async (request, response) => {
     }
   } else {
     // Salida: si fue aprobado → finalizado, si no → no_aprobado
-    turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
+    turn.estado = (turn.confirmedAt || isSupervisorUser(user)) ? 'finalizado' : 'no_aprobado'
   }
   turn.updatedAt = new Date().toISOString()
 
