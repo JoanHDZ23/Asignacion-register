@@ -548,9 +548,16 @@ attendanceRouter.post('/verify-authentication', async (request, response) => {
     checkIn: action === 'entrada' ? attendanceRecord : turn.attendance?.checkIn,
     checkOut: action === 'salida' ? attendanceRecord : turn.attendance?.checkOut,
   }
-  // Supervisores: la entrada queda directamente como 'confirmado'
+  // Supervisores: la entrada queda directamente como 'confirmado' + auto-aprobado
   if (action === 'entrada') {
-    turn.estado = isSupervisorUser(user) ? 'confirmado' : 'en_proceso'
+    if (isSupervisorUser(user)) {
+      turn.estado = 'confirmado'
+      turn.confirmedAt = new Date().toISOString()
+      turn.confirmedByUserId = user.id
+      turn.confirmedByUserName = user.nombreCompleto
+    } else {
+      turn.estado = 'en_proceso'
+    }
   } else {
     // Salida: si fue aprobado → finalizado, si no → no_aprobado
     turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
@@ -749,9 +756,16 @@ attendanceRouter.post('/mark', async (request, response) => {
     checkIn:  parsedAction === 'entrada' ? attendanceRecord : turn.attendance?.checkIn,
     checkOut: parsedAction === 'salida'  ? attendanceRecord : turn.attendance?.checkOut,
   }
-  // Supervisores: la entrada queda directamente como 'confirmado'
+  // Supervisores: la entrada queda directamente como 'confirmado' + auto-aprobado
   if (parsedAction === 'entrada') {
-    turn.estado = isSupervisorUser(user) ? 'confirmado' : 'en_proceso'
+    if (isSupervisorUser(user)) {
+      turn.estado = 'confirmado'
+      turn.confirmedAt = new Date().toISOString()
+      turn.confirmedByUserId = user.id
+      turn.confirmedByUserName = user.nombreCompleto
+    } else {
+      turn.estado = 'en_proceso'
+    }
   } else {
     // Salida: si fue aprobado → finalizado, si no → no_aprobado
     turn.estado = turn.confirmedAt ? 'finalizado' : 'no_aprobado'
