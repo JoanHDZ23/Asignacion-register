@@ -1724,7 +1724,12 @@ export default function AttendanceAdminPage() {
             </div>
             {workers.length ? (
               <div className="turn-form__worker-list">
-                {workers.map((w) => {
+                {[...workers].sort((a, b) => {
+                  const aSelected = selectedWorkerIds.includes(a.id) ? 0 : 1
+                  const bSelected = selectedWorkerIds.includes(b.id) ? 0 : 1
+                  if (aSelected !== bSelected) return aSelected - bSelected
+                  return a.nombreCompleto.localeCompare(b.nombreCompleto)
+                }).map((w) => {
                   const isSelected = selectedWorkerIds.includes(w.id)
                   const hasConflict = turnConflicts.includes(w.nombreCompleto)
                   return (
