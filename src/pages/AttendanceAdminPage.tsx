@@ -189,6 +189,7 @@ export default function AttendanceAdminPage() {
   const [turns, setTurns] = useState<TurnResponse[]>([])
   const [companyName, setCompanyName] = useState('')
   const [companyType, setCompanyType] = useState<'empresa' | 'academia'>('empresa')
+  const [companyEnabledModules, setCompanyEnabledModules] = useState<string[]>([])
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null)
   const [editingPosition, setEditingPosition] = useState<PositionResponse | null>(null)
@@ -251,6 +252,7 @@ export default function AttendanceAdminPage() {
         setTurns(response.turns)
         if (response.company?.nombre) setCompanyName(response.company.nombre)
         if (response.company?.tipo) setCompanyType(response.company.tipo)
+        if (response.company?.enabledModules) setCompanyEnabledModules(response.company.enabledModules)
         if (response.currentUser && currentUser) {
           setCurrentUser({ ...currentUser, companyId: response.currentUser.companyId,
             role: response.currentUser.role, positionId: response.currentUser.positionId,
@@ -1588,7 +1590,14 @@ export default function AttendanceAdminPage() {
             <h4>Permisos de acceso</h4>
             <p>Activa módulos y define el nivel: Ver (solo lectura), Editar (crear/modificar), Total (incluye eliminar).</p>
           </div>
-          {(companyType === 'empresa' ? empresaPermissionGroups : academiaPermissionGroups).map((group) => (
+          {(companyType === 'empresa' ? empresaPermissionGroups : academiaPermissionGroups)
+            .concat(companyEnabledModules.includes('trazabilidad') ? [{
+              title: 'Trazabilidad',
+              description: 'Registro fotográfico de productos entrantes y salientes.',
+              tag: 'Logística',
+              modules: ['trazabilidad'] as AccessModule[],
+            }] : [])
+            .map((group) => (
             <div className="access-picker__group" key={group.title}>
               <div className="access-picker__group-header">
                 <div className="access-picker__group-title">
