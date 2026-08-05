@@ -209,7 +209,7 @@ export default function AttendanceAdminPage() {
   // Multi-employee turn form state
   const [turnForm, setTurnForm] = useState({
     titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4',
-    whatsappMsg: '🔔 *Nuevo turno asignado*\n\nIngresa para confirmar tu asistencia.',
+    whatsappMsg: '🔔 *Nuevo turno asignado*\n\nHola {nombre}, se te ha asignado un turno en *{ubicacion}* para el *{fecha}* en horario de *{hora}*.\n\nConfirma tu asistencia aquí:\n{link}',
   })
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([])
   const [turnConflicts, setTurnConflicts] = useState<string[]>([])
@@ -754,7 +754,7 @@ export default function AttendanceAdminPage() {
           : `${created} turno(s) "${turnForm.titulo}" registrados. ${createdWorkers.filter((w) => w.telefono).length ? 'Notificaciones WhatsApp enviadas.' : ''}`,
       })
       setActiveModal(null)
-      setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4', whatsappMsg: '🔔 *Nuevo turno asignado*\n\nIngresa para confirmar tu asistencia.' })
+      setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4', whatsappMsg: '🔔 *Nuevo turno asignado*\n\nHola {nombre}, se te ha asignado un turno en *{ubicacion}* para el *{fecha}* en horario de *{hora}*.\n\nConfirma tu asistencia aquí:\n{link}' })
       setSelectedWorkerIds([])
       setTurnConflicts([])
       await loadAdminData()
@@ -900,7 +900,7 @@ export default function AttendanceAdminPage() {
   }
 
   const resetTurnModal = () => {
-    setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4', whatsappMsg: '🔔 *Nuevo turno asignado*\n\nIngresa para confirmar tu asistencia.' })
+    setTurnForm({ titulo: '', fecha: '', hora: '', horaFin: '', locationId: '', descripcion: '', confirmHoursLimit: '4', whatsappMsg: '🔔 *Nuevo turno asignado*\n\nHola {nombre}, se te ha asignado un turno en *{ubicacion}* para el *{fecha}* en horario de *{hora}*.\n\nConfirma tu asistencia aquí:\n{link}' })
     setSelectedWorkerIds([])
     setTurnConflicts([])
     setActiveModal(null)
@@ -1780,6 +1780,17 @@ export default function AttendanceAdminPage() {
                   {v.label}
                 </button>
               ))}
+              <button type="button" className="wa-vars__btn" style={{ marginLeft: 'auto', fontWeight: 600 }}
+                onClick={() => {
+                  const loc = locations.find((l) => l.id === turnForm.locationId)
+                  const locationName = loc?.nombre ?? 'la sede asignada'
+                  const fecha = turnForm.fecha || 'la fecha indicada'
+                  const hora = turnForm.hora ? (turnForm.horaFin ? `${turnForm.hora} a ${turnForm.horaFin}` : turnForm.hora) : 'el horario asignado'
+                  const msg = `🔔 *Nuevo turno asignado*\n\nHola {nombre}, se te ha asignado un turno en *${locationName}* para el *${fecha}* en horario de *${hora}*.\n\nPor favor confirma tu asistencia ingresando al siguiente enlace:\n{link}\n\n📍 ${locationName}\n📅 ${fecha}\n🕐 ${hora}`
+                  setTurnForm((f) => ({ ...f, whatsappMsg: msg }))
+                }}>
+                ✨ Generar mensaje
+              </button>
             </div>
           </label>
 
