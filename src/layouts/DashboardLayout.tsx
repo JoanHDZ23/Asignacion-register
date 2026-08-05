@@ -31,6 +31,7 @@ export function DashboardLayout() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [companyName, setCompanyName] = useState('')
+  const [companyEnabledModules, setCompanyEnabledModules] = useState<string[]>([])
 
   const navigationGroups = useMemo(
     () => {
@@ -50,11 +51,17 @@ export function DashboardLayout() {
         'porcentaje-asistencia': { to: '/dashboard/gestion-asistencia', label: 'Control asistencia', icon: 'icon-clipboard' },
       }
 
+      // Módulos que requieren que la empresa los tenga habilitados
+      const companyGatedModules = ['trazabilidad']
+
       // Construye items únicos (sin duplicar rutas)
       const seenPaths = new Set<string>()
       const operationItems: NavigationItem[] = []
 
       for (const mod of allowedModules) {
+        // Si el módulo requiere habilitación a nivel empresa, validar
+        if (companyGatedModules.includes(mod) && !companyEnabledModules.includes(mod)) continue
+
         const nav = moduleNavMap[mod]
         if (nav && !seenPaths.has(nav.to)) {
           seenPaths.add(nav.to)
@@ -62,12 +69,16 @@ export function DashboardLayout() {
         }
       }
 
-      // Admin y supervisor siempre ven ambas vistas
+      // Admin y supervisor siempre ven ambas vistas base
       if ((isAdmin || isSupervisor) && !seenPaths.has('/dashboard/asignacion-turnos')) {
         operationItems.unshift({ to: '/dashboard/asignacion-turnos', label: 'Turnos', icon: 'icon-calendar' })
       }
       if ((isAdmin || isSupervisor) && !seenPaths.has('/dashboard/gestion-asistencia')) {
         operationItems.push({ to: '/dashboard/gestion-asistencia', label: 'Gestion', icon: 'icon-clipboard' })
+      }
+      // Admin/supervisor: mostrar trazabilidad SOLO si la empresa lo tiene habilitado
+      if ((isAdmin || isSupervisor) && companyEnabledModules.includes('trazabilidad') && !seenPaths.has('/dashboard/trazabilidad')) {
+        operationItems.push({ to: '/dashboard/trazabilidad', label: 'Trazabilidad', icon: 'icon-clipboard' })
       }
 
       return ([
@@ -83,7 +94,7 @@ export function DashboardLayout() {
         },
       ] as NavigationGroup[]).filter((group) => group.items.length)
     },
-    [allowedModules, isAdmin, isSupervisor],
+    [allowedModules, isAdmin, isSupervisor, companyEnabledModules],
   )
 
   const navigationItems = useMemo(
@@ -157,6 +168,12 @@ export function DashboardLayout() {
     // Dashboard siempre accesible si tiene el módulo
     if (currentPath === '/dashboard' && allowedModules.includes('dashboard')) return
 
+    // Trazabilidad: requiere que la empresa lo tenga habilitado, sin importar el rol
+    if (currentPath.includes('/dashboard/trazabilidad') && !companyEnabledModules.includes('trazabilidad')) {
+      navigate(firstAllowedPath, { replace: true })
+      return
+    }
+
     // Si la ruta actual existe en el menú de navegación → permitir
     if (navigationItems.some((item) => currentPath.includes(item.to))) return
 
@@ -164,7 +181,7 @@ export function DashboardLayout() {
     if (isAdmin || isSupervisor) return
 
     navigate(firstAllowedPath, { replace: true })
-  }, [allowedModules, isAdmin, isSupervisor, location.pathname, navigate, navigationItems])
+  }, [allowedModules, companyEnabledModules, isAdmin, isSupervisor, location.pathname, navigate, navigationItems])
 
   // Load company name
   useEffect(() => {
@@ -175,10 +192,12 @@ export function DashboardLayout() {
         if (canUseManagement) {
           const result = await apiRequest<CompanyManagementResponse>('/companies/management', { token })
           setCompanyName(result.company?.nombre ?? '')
+          setCompanyEnabledModules(result.company?.enabledModules ?? [])
           return
         }
         const company = await apiRequest<CompanyResponse>('/companies/me', { token })
         setCompanyName(company.nombre)
+        setCompanyEnabledModules(company.enabledModules ?? [])
       } catch {
         setCompanyName('')
       }
