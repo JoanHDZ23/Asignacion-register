@@ -212,6 +212,7 @@ export default function AttendanceAdminPage() {
     whatsappMsg: '🔔 *Nuevo turno asignado*\n\nHola {nombre}, se te ha asignado un turno en *{ubicacion}* para el *{fecha}* en horario de *{hora}*.\n\nConfirma tu asistencia aquí:\n{link}',
   })
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>([])
+  const [selectedMsgVars, setSelectedMsgVars] = useState<string[]>(['{ubicacion}', '{fecha}', '{hora}', '{nombre}', '{link}'])
   const [turnConflicts, setTurnConflicts] = useState<string[]>([])
   const [deletingTurn, setDeletingTurn] = useState<TurnResponse | null>(null)
   const [editingTurnData, setEditingTurnData] = useState<{ turn: TurnResponse; fecha: string; hora: string; horaFin: string; locationId: string } | null>(null)
@@ -1766,7 +1767,7 @@ export default function AttendanceAdminPage() {
             <span>Mensaje WhatsApp</span>
             <textarea
               className="custom-form__control custom-form__control--textarea"
-              rows={3}
+              rows={4}
               value={turnForm.whatsappMsg}
               onChange={(e) => setTurnForm((f) => ({ ...f, whatsappMsg: e.target.value }))}
               placeholder="Mensaje personalizado para notificar al empleado"
@@ -1779,23 +1780,42 @@ export default function AttendanceAdminPage() {
                 { label: '🕐 Hora', value: '{hora}' },
                 { label: '👤 Empleado', value: '{nombre}' },
                 { label: '🔗 Link', value: '{link}' },
-              ].map((v) => (
-                <button key={v.value} type="button" className="wa-vars__btn"
-                  onClick={() => setTurnForm((f) => ({ ...f, whatsappMsg: f.whatsappMsg + ' ' + v.value }))}>
-                  {v.label}
-                </button>
-              ))}
-              <button type="button" className="wa-vars__btn" style={{ marginLeft: 'auto', fontWeight: 600 }}
-                onClick={() => {
-                  const loc = locations.find((l) => l.id === turnForm.locationId)
-                  const locationName = loc?.nombre ?? 'la sede asignada'
-                  const fecha = turnForm.fecha || 'la fecha indicada'
-                  const hora = turnForm.hora ? (turnForm.horaFin ? `${turnForm.hora} a ${turnForm.horaFin}` : turnForm.hora) : 'el horario asignado'
-                  const msg = `🔔 *Nuevo turno asignado*\n\nHola {nombre}, se te ha asignado un turno en *${locationName}* para el *${fecha}* en horario de *${hora}*.\n\nPor favor confirma tu asistencia ingresando al siguiente enlace:\n{link}\n\n📍 ${locationName}\n📅 ${fecha}\n🕐 ${hora}`
-                  setTurnForm((f) => ({ ...f, whatsappMsg: msg }))
-                }}>
-                ✨ Generar mensaje
-              </button>
+              ].map((v) => {
+                const isActive = selectedMsgVars.includes(v.value)
+                return (
+                  <button key={v.value} type="button"
+                    className={`wa-vars__btn${isActive ? ' wa-vars__btn--active' : ''}`}
+                    style={isActive ? { background: 'var(--clr-primary, #7c3aed)', color: '#fff', borderColor: 'var(--clr-primary, #7c3aed)' } : {}}
+                    onClick={() => {
+                      const next = isActive
+                        ? selectedMsgVars.filter((x) => x !== v.value)
+                        : [...selectedMsgVars, v.value]
+                      setSelectedMsgVars(next)
+                      // Regenerar mensaje con las variables seleccionadas
+                      const loc = locations.find((l) => l.id === turnForm.locationId)
+                      const locationName = loc?.nombre ?? 'la sede asignada'
+                      const fecha = turnForm.fecha || 'la fecha indicada'
+                      const hora = turnForm.hora ? (turnForm.horaFin ? `${turnForm.hora} a ${turnForm.horaFin}` : turnForm.hora) : 'el horario asignado'
+                      let msg = '🔔 *Nuevo turno asignado*\n\n'
+                      if (next.includes('{nombre}')) msg += 'Hola {nombre}, '
+                      msg += 'se te ha asignado un turno'
+                      if (next.includes('{ubicacion}')) msg += ` en *${locationName}*`
+                      if (next.includes('{fecha}')) msg += ` para el *${fecha}*`
+                      if (next.includes('{hora}')) msg += ` en horario de *${hora}*`
+                      msg += '.\n'
+                      if (next.includes('{link}')) msg += '\nConfirma tu asistencia aquí:\n{link}\n'
+                      // Resumen al final
+                      const resumen: string[] = []
+                      if (next.includes('{ubicacion}')) resumen.push(`📍 ${locationName}`)
+                      if (next.includes('{fecha}')) resumen.push(`📅 ${fecha}`)
+                      if (next.includes('{hora}')) resumen.push(`🕐 ${hora}`)
+                      if (resumen.length) msg += '\n' + resumen.join('\n')
+                      setTurnForm((f) => ({ ...f, whatsappMsg: msg }))
+                    }}>
+                    {v.label}
+                  </button>
+                )
+              })}
             </div>
           </label>
 
